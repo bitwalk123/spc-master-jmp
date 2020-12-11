@@ -3,9 +3,28 @@
  *
  * created by Keiichi Takahashi
  *****************************************************************************/
+// set name space to local
+Names Default To Here( 1 );
 
 // debug flag
 debug = 0;
+
+// not implemented dialog
+notImplemented = Expr(
+	New Window( "Sorry!",
+		modal,
+		V List Box(
+			Spacer Box( size( 5, 10 ) ),
+			Text Box( "Not Implemented Yet!" ),
+			Text Box( " " ),
+			H List Box(
+				Spacer Box( size( 120, 0 ) ),
+				but_ok = Button Box( "OK" ),
+				but_ok << set icon( "RangeCheck" )
+			)
+		)
+	)
+);
 
 /*****************************************************************************
  * loadMaster
@@ -122,28 +141,50 @@ deleteEmptyRow = Function( {dt, colname},
 );
 
 /*****************************************************************************
- * findPartParamRow
+ * concatTwoCols
  *
  * description
- *   find row where specified "Part Number" and "Parameter Name" are matched
+ *   generate list of elements concatenated two 
  *
  * arguments
- *   dt        : data table
- *   partnum   : Part Number
- *   paramname : Parameter Name
+ *   dt       : data table
+ *   colname1 : name of column 1
+ *   colname2 : name of column 2
+ *   sep      : separater, default = 2 spaces
  *
  * return
- *   row number where "Part Number" and "Parameter Name" are matched at first
+ *   list of element of colname1 || sep || element of colname2
  *****************************************************************************/
-findPartParamRow = Function( {dt, partnum, paramname},
+concatTwoCols = Function( {dt, colname1, colname2, sep = "  "},
 	rows = N Rows( dt );
+	elementList = {};
 	For( r = 1, r <= rows, r++,
-		part = Column( dt, "Part Number" )[r];
-		param = Column( dt, "Parameter Name" )[r];
-		If( part == partnum & param == paramname,
-			Return( r )
-		);
+		item1 = Column( dt, colname1 )[r];
+		item2 = Column( dt, colname2 )[r];
+		//element = name1 || sep || name2;
+		element = Concat Items( {item1, item2}, sep );
+		Insert Into( elementList, element );
 	);
+	Return( elementList );
+);
+
+/*****************************************************************************
+ * getCellValue
+ *
+ * description
+ *   get cell valu in specified data table 
+ *
+ * arguments
+ *   dt       : data table
+ *   colname  : NAME of column
+ *   row      : row NUMBER
+ *
+ * return
+ *   velue at specified column name and row
+ *****************************************************************************/
+getCellValue = Function( {dt, colname, row},
+	value = Column( dt, colname )[row];
+	Return( value );
 );
 
 /*****************************************************************************
@@ -161,6 +202,7 @@ If( debug == 1,
 		0,
 		"" // no default file 
 	);
+
 	// If filename is empty, script is aborted with alert dialog.
 	If( filename == "",
 		Throw( "!Empty Filename." )
@@ -171,70 +213,81 @@ If( debug == 1,
 dt_master = loadMaster( filename );
 
 // delete rows where column 1, "Part Number" is empty 
-colname = "Part Number";
-deleteEmptyRow( dt_master, colname );
+deleteEmptyRow( dt_master, "Part Number" );
 
-// extract list of unique "Part Number" using Associative Array
-pnlist = Associative Array( Column( dt_master, "Part Number" ) << Get Values ) <<
-Get Keys;
+// concatate 2 columns in to one list
+elementList = concatTwoCols( dt_master, "Part Number", "Parameter Name" );
 
-// PART NUMBER loop
-n = N Items( pnlist );
-For( i = 1, i <= n, i++, 
-	/*** PART NUMBER ***/
-	partnum = pnlist[i];
-	// open PART NUMBER sheet
-	dt = loadPart( filename, partnum );
-	// delete rows where column 1, "Data Type" is empty
-	colname = "Data Type";
-	deleteEmptyRow( dt, colname );
-	paramlist = dt << Get Column Names( String );
+// ---------------------------------------------------------------------------
+// Main Window
+win_main = New Window( "SPC Master",
+	Show Menu( 0 ),
+	Show Toolbars( 0 ),
+	H List Box(
+		Spacer Box( size( 5, 0 ) ),
+		Panel Box( "Parameter",
+			colListY = List Box( elementList, width( 500 ), nLines( 10 ), max selected( 1 ) )
+		),
+		Panel Box( "Action",
+			Lineup Box( N Col( 1 ),
+				but_plot = Button Box( "Plot",
+					idx = Eval( colListY << GetSelectedIndices )[1];
+					item = Eval( colListY << GetSelected )[1];
+					graph_title = item;
+					// SPC metrices
+					lsl = getCellValue( dt_master, "LSL", idx );
+					target = getCellValue( dt_master, "Target", idx );
+					usl = getCellValue( dt_master, "USL", idx );
+					// Regular Expression to separate PART NUMBER and PARAMETER NAME
+					matchList = Regex Match( item, "^(.+)\s{2}(.+)$" );
+					partnum = matchList[2];
+					paramname = matchList[3];
+					// open PART NUMBER sheet
+					dt = loadPart( filename, partnum );
+					// SPC CHART
+					Control Chart Builder(
+						Show Menu( 0 ),
+						show toolbars( 0 ),
+						Show Two Shewhart Charts( 0 ),
+						Show Control Panel( 0 ),
+						Variables( Y( Column( dt, paramname ) ) ),
+						Chart(
+							Points( Statistic( "Individual" ) ),
+							Limits( Sigma( "Levey Jennings" ) ),
+							Warnings( Test 1( 1 ) ),
+							Add Spec Limits( {LSL( lsl ), USL( usl ), Target( target )} ),
+							Process Capability Analysis(
+								Within Sigma Capability( 0 ),
+								Histogram( 1, Show Within Sigma Density( 0 ) )
+							)
+						),
+						SendToReport(
+							Dispatch(
+								{},
+								paramname,
+								ScaleBox,
+								{Add Ref Line( lsl, "Solid", "Blue", "LSL", 1 ),
+								Add Ref Line( usl, "Solid", "Blue", "USL", 1 ),
+								Add Ref Line( target, "Solid", "Blue", "Target", 1 )}
+							),
+							Dispatch(
+								{},
+								"graph display 1 title",
+								TextEditBox,
+								{Set Text( graph_title )}
+							),
+							Dispatch( {}, "", AxisBox, {Add Axis Label( "" )} ), 
 
-	// PARAMETER NAME loop
-	m = N Items( paramlist );
-	For( j = 6, j <= m, j++, 
-		/*** PARAMETER NAME ***/
-		paramname = paramlist[j];
-		graph_title = partnum || " " || paramname;
-		r = findPartParamRow( dt_master, partnum, paramname );
-		lsl = Column( dt_master, "LSL" )[r];
-		target = Column( dt_master, "Target" )[r];
-		usl = Column( dt_master, "USL" )[r];
-		// SPC CHART
-		Control Chart Builder(
-			invisible,
-			Show Two Shewhart Charts( 0 ),
-			Show Control Panel( 0 ),
-			Variables( Y( Column( dt, paramname ) ) ),
-			Chart(
-				Points( Statistic( "Individual" ) ),
-				Limits( Sigma( "Levey Jennings" ) ),
-				Warnings( Test 1( 1 ) ),
-				Add Spec Limits( {LSL( lsl ), USL( usl ), Target( target )} ),
-				Process Capability Analysis(
-					Within Sigma Capability( 0 ),
-					Histogram( 1, Show Within Sigma Density( 0 ) )
-				)
-			),
-			SendToReport(
-				Dispatch(
-					{},
-					paramname,
-					ScaleBox,
-					{Add Ref Line( lsl, "Solid", "Blue", "LSL", 1 ),
-					Add Ref Line( usl, "Solid", "Blue", "USL", 1 ),
-					Add Ref Line( target, "Solid", "Blue", "Target", 1 )}
+						), 
+
+					);
 				),
-				Dispatch(
-					{},
-					"graph display 1 title",
-					TextEditBox,
-					{Set Text( graph_title )}
-				),
-				Dispatch( {}, "", AxisBox, {Add Axis Label( "" )} ),
-
-			), 
-
-		);
-	);
+				but_plot << set icon( "FunctionalDataExplorer" ),
+				Text Box( " " ),
+				but_quit = Button Box( "Quit", win_main << CloseWindow ),
+				but_quit << set icon( "Close" )
+			)
+		),
+		Spacer Box( size( 5, 0 ) )
+	)
 );
