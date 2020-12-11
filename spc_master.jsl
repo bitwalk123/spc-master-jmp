@@ -17,11 +17,7 @@ notImplemented = Expr(
 			Spacer Box( size( 5, 10 ) ),
 			Text Box( "Not Implemented Yet!" ),
 			Text Box( " " ),
-			H List Box(
-				Spacer Box( size( 120, 0 ) ),
-				but_ok = Button Box( "OK" ),
-				but_ok << set icon( "RangeCheck" )
-			)
+			H List Box( Spacer Box( size( 120, 0 ) ), but_ok = Button Box( "OK" ), but_ok << set icon( "RangeCheck" ) )
 		)
 	)
 );
@@ -192,8 +188,7 @@ getCellValue = Function( {dt, colname, row},
  *****************************************************************************/
 // select file to read
 If( debug == 1,
-	filename =
-	"/C:/Users/KTAKAHAS/OneDrive - ASM International/Documents/SPC/Techno Quartz_SPC_20201130_Rev2.0.xlsm",
+	filename = "/C:/Users/KTAKAHAS/OneDrive - ASM International/Documents/SPC/Techno Quartz_SPC_20201130_Rev2.0.xlsm",
 	filename = Pick File(
 		"Select SPC macro file",
 		"", // no default directory
@@ -209,14 +204,26 @@ If( debug == 1,
 	);
 );
 
-// Open Master sheet of filename
-dt_master = loadMaster( filename );
+
+// disctonary for data table
+dict_dt = Associative Array();
+
+// open Master sheet of filename and register disctionary
+dict_dt["Master"] = loadMaster( filename );
 
 // delete rows where column 1, "Part Number" is empty 
-deleteEmptyRow( dt_master, "Part Number" );
+deleteEmptyRow( dict_dt["Master"], "Part Number" );
+
+// extract list of unique "Part Number" using Associative Array
+partlist = Associative Array( Column( dict_dt["Master"], "Part Number" ) << Get Values ) << Get Keys;
+// open data sheet and register disctionary
+For( i = 1, i <= N Items( partlist ), i++,
+	partnum = partlist[i];
+	dict_dt[partnum] = loadPart( filename, partnum );
+);
 
 // concatate 2 columns in to one list
-elementList = concatTwoCols( dt_master, "Part Number", "Parameter Name" );
+elementList = concatTwoCols( dict_dt["Master"], "Part Number", "Parameter Name" );
 
 // ---------------------------------------------------------------------------
 // Main Window
@@ -225,61 +232,58 @@ win_main = New Window( "SPC Master",
 	Show Toolbars( 0 ),
 	H List Box(
 		Spacer Box( size( 5, 0 ) ),
-		Panel Box( "Parameter",
-			colListY = List Box( elementList, width( 500 ), nLines( 10 ), max selected( 1 ) )
-		),
+		Panel Box( "Parameter", lbox = colListY = List Box( elementList, width( 500 ), nLines( 10 ), max selected( 1 ) ) ),
 		Panel Box( "Action",
 			Lineup Box( N Col( 1 ),
 				but_plot = Button Box( "Plot",
 					idx = Eval( colListY << GetSelectedIndices )[1];
-					item = Eval( colListY << GetSelected )[1];
-					graph_title = item;
-					// SPC metrices
-					lsl = getCellValue( dt_master, "LSL", idx );
-					target = getCellValue( dt_master, "Target", idx );
-					usl = getCellValue( dt_master, "USL", idx );
+					graph_title = Eval( colListY << GetSelected )[1];
 					// Regular Expression to separate PART NUMBER and PARAMETER NAME
-					matchList = Regex Match( item, "^(.+)\s{2}(.+)$" );
+					matchList = Regex Match( graph_title, "^(.+)\s{2}(.+)$" );
 					partnum = matchList[2];
 					paramname = matchList[3];
-					// open PART NUMBER sheet
-					dt = loadPart( filename, partnum );
+					// Spec Limits
+					lsl = getCellValue( dict_dt["Master"], "LSL", idx );
+					usl = getCellValue( dict_dt["Master"], "USL", idx );
+					target = getCellValue( dict_dt["Master"], "Target", idx );
+
+					// Control Limits
+					lcl = getCellValue( dict_dt["Master"], "LCL", idx );
+					ucl = getCellValue( dict_dt["Master"], "UCL", idx );
+					avg = getCellValue( dict_dt["Master"], "Avg", idx );
+
+					// Recent Control Limits
+					rlcl = getCellValue( dict_dt["Master"], "RLCL", idx );
+					rucl = getCellValue( dict_dt["Master"], "RUCL", idx );
+					ravg = getCellValue( dict_dt["Master"], "R Avg", idx );
+
 					// SPC CHART
 					Control Chart Builder(
-						Show Menu( 0 ),
-						show toolbars( 0 ),
 						Show Two Shewhart Charts( 0 ),
 						Show Control Panel( 0 ),
-						Variables( Y( Column( dt, paramname ) ) ),
+						Variables( Y( Column( dict_dt[partnum], paramname ) ) ),
 						Chart(
 							Points( Statistic( "Individual" ) ),
 							Limits( Sigma( "Levey Jennings" ) ),
-							Warnings( Test 1( 1 ) ),
+							Warnings( Test 1( 1 ) ), 
+							//Add Limits( {RLCL( rlcl ), RUCL( rusl )} ),
+							Set Control Limits( {LCL( lcl ), UCL( ucl ), Avg( avg )} ),
 							Add Spec Limits( {LSL( lsl ), USL( usl ), Target( target )} ),
-							Process Capability Analysis(
-								Within Sigma Capability( 0 ),
-								Histogram( 1, Show Within Sigma Density( 0 ) )
-							)
+							Process Capability Analysis( Within Sigma Capability( 0 ), Histogram( 1, Show Within Sigma Density( 0 ) ) )
 						),
 						SendToReport(
 							Dispatch(
 								{},
 								paramname,
 								ScaleBox,
-								{Add Ref Line( lsl, "Solid", "Blue", "LSL", 1 ),
-								Add Ref Line( usl, "Solid", "Blue", "USL", 1 ),
-								Add Ref Line( target, "Solid", "Blue", "Target", 1 )}
+								{Add Ref Line( lsl, "Solid", "Blue", "LSL", 1 ), Add Ref Line( usl, "Solid", "Blue", "USL", 1 ),
+								Add Ref Line( target, "Solid", "Blue", "Target", 1 ), Add Ref Line( lcl, "Solid", "Red", "LCL", 1 ),
+								Add Ref Line( ucl, "Solid", "Red", "UCL", 1 ), Add Ref Line( avg, "Solid", "Green", "Avg", 1 )}
 							),
-							Dispatch(
-								{},
-								"graph display 1 title",
-								TextEditBox,
-								{Set Text( graph_title )}
-							),
+							Dispatch( {}, "graph display 1 title", TextEditBox, {Set Text( graph_title )} ),
 							Dispatch( {}, "", AxisBox, {Add Axis Label( "" )} ), 
 
-						), 
-
+						)
 					);
 				),
 				but_plot << set icon( "FunctionalDataExplorer" ),
