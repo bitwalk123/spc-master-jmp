@@ -1,13 +1,38 @@
-/*****************************************************************************
- * SPC Master for JMP, release 0.1
- *
- * created by Keiichi Takahashi
- *****************************************************************************/
+/*
+********************************************************************************
+
+ SPC Master for JMP - SPC review tool
+
+--------------------------------------------------------------------------------
+ MIT License
+
+ Copyright (c) 2020 Keiichi Takahashi
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+********************************************************************************
+*/
+
 // set name space to local
 Names Default To Here( 1 );
 
-// debug flag
-debug = 0;
+// Application Version
+app_ver = "0.1";
 
 // not implemented dialog
 notImplemented = Expr(
@@ -22,18 +47,18 @@ notImplemented = Expr(
 	)
 );
 
-/*****************************************************************************
- * loadMaster
- *
- * description
- *   Open Master sheet of filename
- *
- * arguments
- *   filename : filename of Excel macro
- *
- * return
- *   data table
- *****************************************************************************/
+/*******************************************************************************
+ loadMaster
+
+ description
+   Open Master sheet of filename
+
+ arguments
+   filename : filename of Excel macro
+
+ return
+   data table
+ *******************************************************************************/
 loadMaster = Function( {filename},
 	Return(
 		Open(
@@ -67,19 +92,19 @@ loadMaster = Function( {filename},
 	)
 );
 
-/*****************************************************************************
- * loadPart
- *
- * description
- *   Open specific PART sheet of filename
- *
- * arguments
- *   filename : filename of Excel macro
- *   partnum  : Part Number
- *
- * return
- *   data table
- *****************************************************************************/
+/*******************************************************************************
+ loadPart
+
+ description
+   Open specific PART sheet of filename
+
+ arguments
+   filename : filename of Excel macro
+   partnum  : Part Number
+
+ return
+   data table
+ *******************************************************************************/
 loadPart = Function( {filename, partnum},
 	Return(
 		Open(
@@ -113,19 +138,19 @@ loadPart = Function( {filename, partnum},
 	)
 );
 
-/*****************************************************************************
- * deleteEmptyRow
- *
- * description
- *   delete rows where specified column is empty 
- *
- * arguments
- *   dt      : data table
- *   colname : name of column to check if specified row is empty or not
- *
- * return
- *   (none)
- *****************************************************************************/
+/*******************************************************************************
+ deleteEmptyRow
+
+ description
+   delete rows where specified column is empty 
+
+ arguments
+   dt      : data table
+   colname : name of column to check if specified row is empty or not
+
+ return
+   (none)
+ *******************************************************************************/
 deleteEmptyRow = Function( {dt, colname},
 	rows = N Rows( dt );
 	For( r = rows, r > 0, r--,
@@ -136,21 +161,21 @@ deleteEmptyRow = Function( {dt, colname},
 	);
 );
 
-/*****************************************************************************
- * concatTwoCols
- *
- * description
- *   generate list of elements concatenated two 
- *
- * arguments
- *   dt       : data table
- *   colname1 : name of column 1
- *   colname2 : name of column 2
- *   sep      : separater, default = 2 spaces
- *
- * return
- *   list of element of colname1 || sep || element of colname2
- *****************************************************************************/
+/*******************************************************************************
+ concatTwoCols
+
+ description
+   generate list of elements concatenated two 
+
+ arguments
+   dt       : data table
+   colname1 : name of column 1
+   colname2 : name of column 2
+   sep      : separater, default = 2 spaces
+
+ return
+   list of element of colname1 || sep || element of colname2
+ *******************************************************************************/
 concatTwoCols = Function( {dt, colname1, colname2, sep = "  "},
 	rows = N Rows( dt );
 	elementList = {};
@@ -164,44 +189,41 @@ concatTwoCols = Function( {dt, colname1, colname2, sep = "  "},
 	Return( elementList );
 );
 
-/*****************************************************************************
- * getCellValue
- *
- * description
- *   get cell valu in specified data table 
- *
- * arguments
- *   dt       : data table
- *   colname  : NAME of column
- *   row      : row NUMBER
- *
- * return
- *   velue at specified column name and row
- *****************************************************************************/
+/*******************************************************************************
+ getCellValue
+
+ description
+   get cell valu in specified data table 
+
+ arguments
+   dt       : data table
+   colname  : NAME of column
+   row      : row NUMBER
+
+ return
+   velue at specified column name and row
+ *******************************************************************************/
 getCellValue = Function( {dt, colname, row},
 	value = Column( dt, colname )[row];
 	Return( value );
 );
 
-/*****************************************************************************
- * MAIN
- *****************************************************************************/
+/*******************************************************************************
+  MAIN
+ *******************************************************************************/
 // select file to read
-If( debug == 1,
-	filename = "/C:/Users/KTAKAHAS/OneDrive - ASM International/Documents/SPC/Techno Quartz_SPC_20201130_Rev2.0.xlsm",
-	filename = Pick File(
-		"Select SPC macro file",
-		"", // no default directory
-		{"SPC Macro file|xlsm", "All files|*"},
-		1,
-		0,
-		"" // no default file 
-	);
+filename = Pick File(
+	"Select SPC macro file",
+	"", // no default directory
+	{"SPC Macro file|xlsm", "All files|*"},
+	1,
+	0,
+	"" // no default file 
+);
 
-	// If filename is empty, script is aborted with alert dialog.
-	If( filename == "",
-		Throw( "!Empty Filename." )
-	);
+// If filename is empty, script is aborted with alert dialog.
+If( filename == "",
+	Throw( "!Empty Filename." )
 );
 
 
@@ -226,96 +248,129 @@ For( i = 1, i <= N Items( partlist ), i++,
 elementList = concatTwoCols( dict_dt["Master"], "Part Number", "Parameter Name" );
 
 // ---------------------------------------------------------------------------
-// Main Window
-win_main = New Window( "SPC Master",
+//  Main Window
+win_main = New Window( Concat Items( {"SPC Master", app_ver}, " " ),
 	Show Menu( 0 ),
 	Show Toolbars( 0 ),
 	H List Box(
 		Spacer Box( size( 5, 0 ) ),
-		Panel Box( "Parameter", lbox = colListY = List Box( elementList, width( 500 ), nLines( 10 ), max selected( 1 ) ) ),
+		Panel Box( "Parameter", lbox = List Box( elementList, width( 500 ), nLines( 10 ), max selected( 1 ) ) ),
 		Panel Box( "Action",
-			Lineup Box( N Col( 1 ),
+			Lineup Box( N Col( 1 ), 
+				// SPC warnings
 				Panel Box( "Warning",
-					cb = Check Box( {"Test 1", "Test 2", "Test 3", "Test 4", "Test 5", "Test 6", "Test 7", "Test 8"} ),
-					cb << Set( 1, 1 ),
-
+					cb_test = Check Box( {"Test 1", "Test 2", "Test 3", "Test 4", "Test 5", "Test 6", "Test 7", "Test 8"} ), 
+					// SPC Test Rules
+					For( i = 1, i <= 8, i++,
+						cb_test << Set( i, 0 )
+					), 
+					// default
+					cb_test << Set( 1, 1 )
 				),
-				Text Box( " " ),
+				Text Box( " " ), 
+				// Plot button
 				but_plot = Button Box( "Plot",
-					idx = Eval( colListY << GetSelectedIndices )[1];
-					graph_title = Eval( colListY << GetSelected )[1];
-					// Regular Expression to separate PART NUMBER and PARAMETER NAME
-					matchList = Regex Match( graph_title, "^(.+)\s{2}(.+)$" );
-					partnum = matchList[2];
-					paramname = matchList[3];
-					// Spec Limits
-					lsl = getCellValue( dict_dt["Master"], "LSL", idx );
-					usl = getCellValue( dict_dt["Master"], "USL", idx );
-					target = getCellValue( dict_dt["Master"], "Target", idx );
+					If( N Items( lbox << Get Selected Indices ) > 0,
+						idx = Eval( lbox << Get Selected Indices )[1];
+						graph_title = Eval( lbox << Get Selected )[1];
+						// Regular Expression to separate PART NUMBER and PARAMETER NAME
+						matchList = Regex Match( graph_title, "^(.+)\s{2}(.+)$" );
+						partnum = matchList[2];
+						paramname = matchList[3];
+						// Spec Limits
+						lsl = getCellValue( dict_dt["Master"], "LSL", idx );
+						usl = getCellValue( dict_dt["Master"], "USL", idx );
+						target = getCellValue( dict_dt["Master"], "Target", idx );
 
-					// Control Limits
-					lcl = getCellValue( dict_dt["Master"], "LCL", idx );
-					ucl = getCellValue( dict_dt["Master"], "UCL", idx );
-					avg = getCellValue( dict_dt["Master"], "Avg", idx );
+						// Control Limits
+						lcl = getCellValue( dict_dt["Master"], "LCL", idx );
+						ucl = getCellValue( dict_dt["Master"], "UCL", idx );
+						avg = getCellValue( dict_dt["Master"], "Avg", idx );
 
-					// Recent Control Limits
-					rlcl = getCellValue( dict_dt["Master"], "RLCL", idx );
-					rucl = getCellValue( dict_dt["Master"], "RUCL", idx );
-					ravg = getCellValue( dict_dt["Master"], "R Avg", idx );
+						// Recent Control Limits
+						rlcl = getCellValue( dict_dt["Master"], "RLCL", idx );
+						rucl = getCellValue( dict_dt["Master"], "RUCL", idx );
+						ravg = getCellValue( dict_dt["Master"], "R Avg", idx );
 
-					// SPC CHART
-					Control Chart Builder(
-						Show Two Shewhart Charts( 0 ),
-						Show Control Panel( 0 ),
-						Variables( Y( Column( dict_dt[partnum], paramname ) ) ),
-						Chart(
-							Points( Statistic( "Individual" ) ),
-							Limits( Sigma( "Levey Jennings" ) ),
-							Warnings(
-								Test 1( cb << Get(1) ),
-								Test 2( cb << Get(2) ),
-								Test 3( cb << Get(3) ),
-								Test 4( cb << Get(4) ),
-								Test 5( cb << Get(5) ),
-								Test 6( cb << Get(6) ),
-								Test 7( cb << Get(7) ),
-								Test 8( cb << Get(8) )
-							),
-							//Add Limits( {RLCL( rlcl ), RUCL( rusl )} ),
-							Set Control Limits( {LCL( lcl ), UCL( ucl ), Avg( avg )} ),
-							Add Spec Limits( {LSL( lsl ), USL( usl ), Target( target )} ),
-							Process Capability Analysis(
-								Within Sigma Capability( 0 ),
-								Histogram( 1, Show Within Sigma Density( 0 ) )
+						/*
+						Apparently, the platform does not parse statements prior to executing them.
+						Therefore, the following Eval/Substitute/Expr methodology is the way to
+						reflect checkbox values to 'Warnings' parameters.
+					 
+						Reference:
+						https://community.jmp.com/t5/Discussions/How-to-manage-display-hide-Test-n-in-Warnings-of-Control-Chart/m-p/341481
+						*/
+						Eval(
+							Substitute(
+									Expr(
+										// SPC CHART
+										Control Chart Builder(
+											Show Two Shewhart Charts( 0 ),
+											Show Control Panel( 0 ),
+											Variables( Y( Column( dict_dt[partnum], paramname ) ) ),
+											Chart(
+												Points( Statistic( "Individual" ) ),
+												Limits( Sigma( "Levey Jennings" ) ),
+												Warnings(
+													Test 1( __test1__ ),
+													Test 2( __test2__ ),
+													Test 3( __test3__ ),
+													Test 4( __test4__ ),
+													Test 5( __test5__ ),
+													Test 6( __test6__ ),
+													Test 7( __test7__ ),
+													Test 8( __test8__ ), 
+
+												), 
+												// Add Limits( {RLCL( rlcl ), RUCL( rusl )} ),
+												Set Control Limits( {LCL( lcl ), UCL( ucl ), Avg( avg )} ),
+												Add Spec Limits( {LSL( lsl ), USL( usl ), Target( target )} ),
+												Process Capability Analysis(
+													Within Sigma Capability( 0 ),
+													Histogram( 1, Show Within Sigma Density( 0 ) )
+												)
+											),
+											SendToReport(
+												Dispatch(
+													{},
+													paramname,
+													ScaleBox,
+													{Add Ref Line( lsl, "Solid", "Blue", "LSL", 1 ),
+													Add Ref Line( usl, "Solid", "Blue", "USL", 1 ),
+													Add Ref Line( target, "Solid", "Blue", "Target", 1 ),
+													Add Ref Line( lcl, "Solid", "Red", "LCL", 1 ),
+													Add Ref Line( ucl, "Solid", "Red", "UCL", 1 ),
+													Add Ref Line( avg, "Solid", "Green", "Avg", 1 )}
+												),
+												Dispatch( {}, "graph display 1 title", TextEditBox, {Set Text( graph_title )} ),
+												Dispatch( {}, "", AxisBox, {Add Axis Label( "" )} ), 
+
+											)
+										)
+			
+									),
+								Expr( __test1__ ), cb_test << Get( 1 ),
+								Expr( __test2__ ), cb_test << Get( 2 ),
+								Expr( __test3__ ), cb_test << Get( 3 ),
+								Expr( __test4__ ), cb_test << Get( 4 ),
+								Expr( __test5__ ), cb_test << Get( 5 ),
+								Expr( __test6__ ), cb_test << Get( 6 ),
+								Expr( __test7__ ), cb_test << Get( 7 ),
+								Expr( __test8__ ), cb_test << Get( 8 )
 							)
-						),
-						SendToReport(
-							Dispatch(
-								{},
-								paramname,
-								ScaleBox,
-								{Add Ref Line( lsl, "Solid", "Blue", "LSL", 1 ),
-								Add Ref Line( usl, "Solid", "Blue", "USL", 1 ),
-								Add Ref Line( target, "Solid", "Blue", "Target", 1 ),
-								Add Ref Line( lcl, "Solid", "Red", "LCL", 1 ), Add Ref Line(
-									ucl,
-									"Solid",
-									"Red",
-									"UCL",
-									1
-								), Add Ref Line( avg, "Solid", "Green", "Avg", 1 )}
-							),
-							Dispatch( {}, "graph display 1 title", TextEditBox, {Set Text( graph_title )} ),
-							Dispatch( {}, "", AxisBox, {Add Axis Label( "" )} ), 
-
-						)
-					);
+						);
+					)
 				),
-				but_plot << set icon( "FunctionalDataExplorer" ),
+				but_plot << Set Icon( "FunctionalDataExplorer" ),
+				but_plot << Set Icon Location( "left" ), 
+				// Quit button
 				but_quit = Button Box( "Quit", win_main << CloseWindow ),
-				but_quit << set icon( "Close" )
+				but_quit << Set Icon( "Close" ),
+				but_quit << Set Icon Location( "left" )
 			)
 		),
 		Spacer Box( size( 5, 0 ) )
 	)
 );
+// ---
+// END OF PROGRAM
