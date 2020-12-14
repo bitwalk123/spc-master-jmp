@@ -235,6 +235,12 @@ win_main = New Window( "SPC Master",
 		Panel Box( "Parameter", lbox = colListY = List Box( elementList, width( 500 ), nLines( 10 ), max selected( 1 ) ) ),
 		Panel Box( "Action",
 			Lineup Box( N Col( 1 ),
+				Panel Box( "Warning",
+					cb = Check Box( {"Test 1", "Test 2", "Test 3", "Test 4", "Test 5", "Test 6", "Test 7", "Test 8"} ),
+					cb << Set( 1, 1 ),
+
+				),
+				Text Box( " " ),
 				but_plot = Button Box( "Plot",
 					idx = Eval( colListY << GetSelectedIndices )[1];
 					graph_title = Eval( colListY << GetSelected )[1];
@@ -265,20 +271,39 @@ win_main = New Window( "SPC Master",
 						Chart(
 							Points( Statistic( "Individual" ) ),
 							Limits( Sigma( "Levey Jennings" ) ),
-							Warnings( Test 1( 1 ) ), 
+							Warnings(
+								Test 1( cb << Get(1) ),
+								Test 2( cb << Get(2) ),
+								Test 3( cb << Get(3) ),
+								Test 4( cb << Get(4) ),
+								Test 5( cb << Get(5) ),
+								Test 6( cb << Get(6) ),
+								Test 7( cb << Get(7) ),
+								Test 8( cb << Get(8) )
+							),
 							//Add Limits( {RLCL( rlcl ), RUCL( rusl )} ),
 							Set Control Limits( {LCL( lcl ), UCL( ucl ), Avg( avg )} ),
 							Add Spec Limits( {LSL( lsl ), USL( usl ), Target( target )} ),
-							Process Capability Analysis( Within Sigma Capability( 0 ), Histogram( 1, Show Within Sigma Density( 0 ) ) )
+							Process Capability Analysis(
+								Within Sigma Capability( 0 ),
+								Histogram( 1, Show Within Sigma Density( 0 ) )
+							)
 						),
 						SendToReport(
 							Dispatch(
 								{},
 								paramname,
 								ScaleBox,
-								{Add Ref Line( lsl, "Solid", "Blue", "LSL", 1 ), Add Ref Line( usl, "Solid", "Blue", "USL", 1 ),
-								Add Ref Line( target, "Solid", "Blue", "Target", 1 ), Add Ref Line( lcl, "Solid", "Red", "LCL", 1 ),
-								Add Ref Line( ucl, "Solid", "Red", "UCL", 1 ), Add Ref Line( avg, "Solid", "Green", "Avg", 1 )}
+								{Add Ref Line( lsl, "Solid", "Blue", "LSL", 1 ),
+								Add Ref Line( usl, "Solid", "Blue", "USL", 1 ),
+								Add Ref Line( target, "Solid", "Blue", "Target", 1 ),
+								Add Ref Line( lcl, "Solid", "Red", "LCL", 1 ), Add Ref Line(
+									ucl,
+									"Solid",
+									"Red",
+									"UCL",
+									1
+								), Add Ref Line( avg, "Solid", "Green", "Avg", 1 )}
 							),
 							Dispatch( {}, "graph display 1 title", TextEditBox, {Set Text( graph_title )} ),
 							Dispatch( {}, "", AxisBox, {Add Axis Label( "" )} ), 
@@ -287,7 +312,6 @@ win_main = New Window( "SPC Master",
 					);
 				),
 				but_plot << set icon( "FunctionalDataExplorer" ),
-				Text Box( " " ),
 				but_quit = Button Box( "Quit", win_main << CloseWindow ),
 				but_quit << set icon( "Close" )
 			)
