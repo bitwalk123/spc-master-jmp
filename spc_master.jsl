@@ -28,7 +28,7 @@
 ********************************************************************************
 */
 
-// set name space to local
+// set namespace to local
 Names Default To Here( 1 );
 
 // Application Version
