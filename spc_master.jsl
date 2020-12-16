@@ -32,9 +32,9 @@
 Names Default To Here( 1 );
 
 // Application Version
-app_ver = "0.1";
+app_ver = "0.2";
 
-// not implemented dialog
+// dialog for Not Implemented Yet!
 notImplemented = Expr(
 	New Window( "Sorry!",
 		modal,
@@ -242,7 +242,7 @@ deleteEmptyRow( dict_dt["Master"], "Part Number" );
 
 // extract list of unique "Part Number" using Associative Array
 partlist = Associative Array( Column( dict_dt["Master"], "Part Number" ) << Get Values ) << Get Keys;
-// open data sheet and register disctionary
+// open data sheet and register instance to disctionary
 For( i = 1, i <= N Items( partlist ), i++,
 	partnum = partlist[i];
 	dict_dt[partnum] = loadPart( filename, partnum );
