@@ -216,11 +216,11 @@ getCellValue = Function( {dt, colname, row},
  evalCL
 
  description
-   evaluate control limit 
+   evaluate control limit
 
  arguments
    listbox : List Box shown PART NUMBER & PARAMETER NAME
-   dict    : Disctonary of data table
+   dict    : Disctonary of instance of data table
 
  return
    (none) 
@@ -297,8 +297,8 @@ partlist = Associative Array( partlist_all ) << Get Keys;
 
 // Open data sheet and register instance to disctionary
 For( i = 1, i <= N Items( partlist ), i++, 
-	//partnum = partlist[i];
-	dict_dt[partnum] = loadPart( filename, partlist[i] )
+	partnum = partlist[i];
+	dict_dt[partnum] = loadPart( filename, partnum )
 );
 
 // Concatenate 2 columns in to one list
