@@ -1,4 +1,4 @@
-/*
+﻿/*
 ********************************************************************************
 
  SPC Control Limit for JMP - SPC Control Limit evaluation tool
@@ -42,7 +42,11 @@ notImplemented = Expr(
 			Spacer Box( size( 5, 10 ) ),
 			Text Box( "Not Implemented Yet!" ),
 			Text Box( " " ),
-			H List Box( Spacer Box( size( 120, 0 ) ), but_ok = Button Box( "OK" ), but_ok << set icon( "RangeCheck" ) )
+			H List Box(
+				Spacer Box( size( 120, 0 ) ),
+				but_ok = Button Box( "OK" ),
+				but_ok << set icon( "RangeCheck" )
+			)
 		)
 	)
 );
@@ -60,36 +64,36 @@ notImplemented = Expr(
    data table
  *******************************************************************************/
 loadMaster = Function( {filename},
-	Return(
-		Open(
-			filename,
-			invisible,
-			Worksheets( "Master" ),
-			Use for all sheets( 1 ),
-			Concatenate Worksheets( 0 ),
-			Create Concatenation Column( 0 ),
-			Worksheet Settings(
-				1,
-				Has Column Headers( 1 ),
-				Number of Rows in Headers( 1 ),
-				Headers Start on Row( 1 ),
-				Data Starts on Row( 2 ),
-				Data Starts on Column( 1 ),
-				Data Ends on Row( 0 ),
-				Data Ends on Column( 0 ),
-				Replicated Spanned Rows( 1 ),
-				Replicated Spanned Headers( 0 ),
-				Suppress Hidden Rows( 1 ),
-				Suppress Hidden Columns( 1 ),
-				Suppress Empty Columns( 0 ),
-				Treat as Hierarchy( 0 ),
-				Multiple Series Stack( 0 ),
-				Import Cell Colors( 0 ),
-				Limit Column Detect( 0 ),
-				Column Separator String( "-" )
-			)
+	{Default Local},
+	dt = Open(
+		filename,
+		invisible,
+		Worksheets( "Master" ),
+		Use for all sheets( 1 ),
+		Concatenate Worksheets( 0 ),
+		Create Concatenation Column( 0 ),
+		Worksheet Settings(
+			1,
+			Has Column Headers( 1 ),
+			Number of Rows in Headers( 1 ),
+			Headers Start on Row( 1 ),
+			Data Starts on Row( 2 ),
+			Data Starts on Column( 1 ),
+			Data Ends on Row( 0 ),
+			Data Ends on Column( 0 ),
+			Replicated Spanned Rows( 1 ),
+			Replicated Spanned Headers( 0 ),
+			Suppress Hidden Rows( 1 ),
+			Suppress Hidden Columns( 1 ),
+			Suppress Empty Columns( 0 ),
+			Treat as Hierarchy( 0 ),
+			Multiple Series Stack( 0 ),
+			Import Cell Colors( 0 ),
+			Limit Column Detect( 0 ),
+			Column Separator String( "-" )
 		)
-	)
+	);
+	Return( dt );
 );
 
 /*******************************************************************************
@@ -106,36 +110,36 @@ loadMaster = Function( {filename},
    data table
  *******************************************************************************/
 loadPart = Function( {filename, partnum},
-	Return(
-		Open(
-			filename,
-			invisible,
-			Worksheets( partnum ),
-			Use for all sheets( 1 ),
-			Concatenate Worksheets( 0 ),
-			Create Concatenation Column( 0 ),
-			Worksheet Settings(
-				1,
-				Has Column Headers( 1 ),
-				Number of Rows in Headers( 1 ),
-				Headers Start on Row( 2 ),
-				Data Starts on Row( 3 ),
-				Data Starts on Column( 1 ),
-				Data Ends on Row( 0 ),
-				Data Ends on Column( 0 ),
-				Replicated Spanned Rows( 1 ),
-				Replicated Spanned Headers( 0 ),
-				Suppress Hidden Rows( 1 ),
-				Suppress Hidden Columns( 1 ),
-				Suppress Empty Columns( 0 ),
-				Treat as Hierarchy( 0 ),
-				Multiple Series Stack( 0 ),
-				Import Cell Colors( 0 ),
-				Limit Column Detect( 0 ),
-				Column Separator String( "-" )
-			)
+	{Default Local},
+	dt = Open(
+		filename,
+		invisible,
+		Worksheets( partnum ),
+		Use for all sheets( 1 ),
+		Concatenate Worksheets( 0 ),
+		Create Concatenation Column( 0 ),
+		Worksheet Settings(
+			1,
+			Has Column Headers( 1 ),
+			Number of Rows in Headers( 1 ),
+			Headers Start on Row( 2 ),
+			Data Starts on Row( 3 ),
+			Data Starts on Column( 1 ),
+			Data Ends on Row( 0 ),
+			Data Ends on Column( 0 ),
+			Replicated Spanned Rows( 1 ),
+			Replicated Spanned Headers( 0 ),
+			Suppress Hidden Rows( 1 ),
+			Suppress Hidden Columns( 1 ),
+			Suppress Empty Columns( 0 ),
+			Treat as Hierarchy( 0 ),
+			Multiple Series Stack( 0 ),
+			Import Cell Colors( 0 ),
+			Limit Column Detect( 0 ),
+			Column Separator String( "-" )
 		)
-	)
+	);
+	Return( dt );
 );
 
 /*******************************************************************************
@@ -165,7 +169,7 @@ deleteEmptyRow = Function( {dt, colname},
  concatTwoCols
 
  description
-   generate list of elements concatenated two 
+   Concatenate 2 columns in to one list 
 
  arguments
    dt       : data table
@@ -193,7 +197,7 @@ concatTwoCols = Function( {dt, colname1, colname2, sep = "  "},
  getCellValue
 
  description
-   get cell valu in specified data table 
+   Get cell value in specified data table 
 
  arguments
    dt       : data table
@@ -205,24 +209,21 @@ concatTwoCols = Function( {dt, colname1, colname2, sep = "  "},
  *******************************************************************************/
 getCellValue = Function( {dt, colname, row},
 	value = Column( dt, colname )[row];
-	//If( Is Missing( value ),
-	//	Print( "Missing" ),
-	//	Print( value )
-	//);
 	Return( value );
 );
 
 /*******************************************************************************
   MAIN
  *******************************************************************************/
+
 // select file to read
 filename = Pick File(
-	"Select SPC macro file",
-	"", // no default directory
-	{"SPC Macro file|xlsm", "All files|*"},
-	1,
-	0,
-	"" // no default file 
+	"Select SPC macro file", // prompt message
+	"", // initial directory
+	{"SPC Macro file|xlsm", "All files|*"}, // file filter list by extention
+	1, // intially selected item
+	0, // doesn’t prompt the user to save the file
+	"" // file that is selected by default
 );
 
 // If filename is empty, script is aborted with alert dialog.
@@ -230,25 +231,25 @@ If( filename == "",
 	Throw( "!Empty Filename." )
 );
 
-
-// disctonary for data table
+// Disctonary for data table
 dict_dt = Associative Array();
 
-// open Master sheet of filename and register disctionary
+// Open Master sheet of filename and register disctionary
 dict_dt["Master"] = loadMaster( filename );
 
-// delete rows where column 1, "Part Number" is empty 
+// Delete rows where column 1, "Part Number" is empty 
 deleteEmptyRow( dict_dt["Master"], "Part Number" );
 
-// extract list of unique "Part Number" using Associative Array
+// Extract list of unique "Part Number" using Associative Array
 partlist = Associative Array( Column( dict_dt["Master"], "Part Number" ) << Get Values ) << Get Keys;
-// open data sheet and register instance to disctionary
+
+// Open data sheet and register instance to disctionary
 For( i = 1, i <= N Items( partlist ), i++,
 	partnum = partlist[i];
 	dict_dt[partnum] = loadPart( filename, partnum );
 );
 
-// concatate 2 columns in to one list
+// Concatenate 2 columns in to one list
 elementList = concatTwoCols( dict_dt["Master"], "Part Number", "Parameter Name" );
 
 // ---------------------------------------------------------------------------
@@ -263,7 +264,9 @@ win_main = New Window( Concat Items( {"SPC Master", app_ver}, " " ),
 			Lineup Box( N Col( 1 ), 
 				// SPC warnings
 				Panel Box( "Warning",
-					cb_test = Check Box( {"Test 1", "Test 2", "Test 3", "Test 4", "Test 5", "Test 6", "Test 7", "Test 8"} ), 
+					cb_test = Check Box(
+						{"Test 1", "Test 2", "Test 3", "Test 4", "Test 5", "Test 6", "Test 7", "Test 8"}
+					), 
 					// SPC Test Rules
 					For( i = 1, i <= 8, i++,
 						cb_test << Set( i, 0 )
@@ -328,8 +331,12 @@ win_main = New Window( Concat Items( {"SPC Master", app_ver}, " " ),
 
 												), 
 												// Add Limits( {RLCL( rlcl ), RUCL( rusl )} ),
-												Set Control Limits( {LCL( __lcl__ ), UCL( __ucl__ ), Avg( __avg__ )} ),
-												Add Spec Limits( {LSL( __lsl__ ), USL( __usl__ ), Target( __target__ )} ),
+												Set Control Limits(
+													{LCL( __lcl__ ), UCL( __ucl__ ), Avg( __avg__ )}
+												),
+												Add Spec Limits(
+													{LSL( __lsl__ ), USL( __usl__ ), Target( __target__ )}
+												),
 												Process Capability Analysis(
 													Within Sigma Capability( 0 ),
 													Histogram( 1, Show Within Sigma Density( 0 ) )
@@ -347,7 +354,12 @@ win_main = New Window( Concat Items( {"SPC Master", app_ver}, " " ),
 													Add Ref Line( __ucl__, "Solid", "Red", "UCL", 1 ),
 													Add Ref Line( __avg__, "Solid", "Green", "Avg", 1 )}
 												),
-												Dispatch( {}, "graph display 1 title", TextEditBox, {Set Text( __title__ )} ),
+												Dispatch(
+													{},
+													"graph display 1 title",
+													TextEditBox,
+													{Set Text( __title__ )}
+												),
 												Dispatch( {}, "", AxisBox, {Add Axis Label( "" )} ), 
 
 											)
