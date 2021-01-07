@@ -32,7 +32,14 @@
 Names Default To Here( 1 );
 
 // Application Version
-app_ver = "0.1";
+app_ver = "0.1"; // from 5-Jan-2021
+/*
+--------------------------------------------------------------------------------
+*** v0.1 milestone ***
+
+implement initial set of output reports
+--------------------------------------------------------------------------------
+*/
 
 // dialog for Not Implemented Yet!
 notImplemented = Expr(
