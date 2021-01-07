@@ -37,11 +37,11 @@ app_ver = "0.1"; // from 5-Jan-2021
 --------------------------------------------------------------------------------
 *** v0.1 milestone ***
 
-implement initial set of output reports
+implement initial set of UI elements
 --------------------------------------------------------------------------------
 */
 
-// dialog for Not Implemented Yet!
+// dialog for 'Not Implemented Yet'!
 notImplemented = Expr(
 	New Window( "Sorry!",
 		modal,
