@@ -251,7 +251,7 @@ spcChart = Function( {dt, paramname},
    instance of the Distribution report
  *******************************************************************************/
 spcHist = Function( {dt, paramname},
-	{Default Local},
+	{Default Local}, 
 	// https://community.jmp.com/t5/Discussions/How-to-manage-display-hide-Test-n-in-Warnings-of-Control-Chart/td-p/341481
 	Eval(
 		Substitute(
@@ -314,6 +314,31 @@ evalCL = Function( {listbox, dict},
 );
 
 /*******************************************************************************
+ quitApp
+
+ description
+   Close application
+
+ arguments
+   win  : Application window
+   dict : Disctonary of instance of data table
+
+ return
+   (none) 
+ *******************************************************************************/
+quitApp = Function( {win, dict},
+	// Close all tables stored in dictionary
+	//
+	//   reference: https://community.jmp.com/t5/JSL-Cookbook/Looping-through-an-Associative-Array-s-elements/ta-p/236892
+	For( dt = dict << first, !Is Empty( dt ), dt = dict << next( dt ),
+		Close( dt, "No Save" )
+	);
+	// Close Application Window
+	win << Close Window();
+);
+
+
+/*******************************************************************************
   MAIN
  *******************************************************************************/
 
@@ -368,12 +393,12 @@ win_main = New Window( Concat Items( {"SPC Control Limit", app_ver}, " " ),
 		Panel Box( "Parameter", lbox = List Box( elementList, width( 500 ), nLines( 10 ), max selected( 1 ) ) ),
 		Panel Box( "Action",
 			Lineup Box( N Col( 1 ), 
-				// Eval button
+				// Evaluate CL button
 				but_plot = Button Box( "Eval", evalCL( lbox, dict_dt ) ),
 				but_plot << Set Icon( "FunctionalDataExplorer" ),
 				but_plot << Set Icon Location( "left" ), 
 				// Quit button
-				but_quit = Button Box( "Quit", win_main << CloseWindow ),
+				but_quit = Button Box( "Quit", quitApp( win_main, dict_dt ) ),
 				but_quit << Set Icon( "Close" ),
 				but_quit << Set Icon Location( "left" )
 			)
@@ -381,5 +406,6 @@ win_main = New Window( Concat Items( {"SPC Control Limit", app_ver}, " " ),
 		Spacer Box( size( 5, 0 ) )
 	)
 );
+
 // ---
 // END OF PROGRAM
