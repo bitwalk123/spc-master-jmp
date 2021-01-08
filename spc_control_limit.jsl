@@ -32,12 +32,12 @@
 Names Default To Here( 1 );
 
 // Application Version
-app_ver = "0.1"; // from 5-Jan-2021
+app_ver = "0.2"; // from 8-Jan-2021
 /*
 --------------------------------------------------------------------------------
-*** v0.1 milestone ***
+*** v0.2 milestone ***
 
-implement initial set of UI elements
+implement reporting function for all parameters
 --------------------------------------------------------------------------------
 */
 
@@ -272,10 +272,13 @@ spcHist = Function( {dt, paramname},
 						Continuous Distribution(
 							Column( __param__ ),
 							Quantiles( 0 ),
-							Horizontal Layout( 1 ),
 							Vertical( 0 ),
 							Count Axis( 1 ),
 							Fit Distribution( Normal( Goodness of Fit( 1 ) ) )
+						),
+						SendToReport(
+							Dispatch( {__param__}, "Summary Statistics", OutlineBox, {Close( 1 )} ),
+							Dispatch( {__param__, "Fitted Normal"}, "Parameter Estimates", OutlineBox, {Close( 1 )} )
 						)
 					);
 					Return( obj );
@@ -315,7 +318,7 @@ summaryTbl = Function( {},
 		New Column( "LSL", Numeric, "Continuous", Set Values( [] ) ),
 		New Column( "USL", Numeric, "Continuous", Set Values( [] ) )
 	);
-	Return(obj);
+	Return( obj );
 );
 
 /*******************************************************************************
@@ -345,28 +348,88 @@ evalCL = Function( {listbox},
 	partnum = matchList[2];
 	paramname = matchList[3];
 
-	// Spec Limits
-	lsl = getCellValue( Here:dict["Master"], "LSL", idx );
-	usl = getCellValue( Here:dict["Master"], "USL", idx );
-
+	//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 	// Control Chart
-	chart = spcChart( Here:dict[partnum], paramname );
+	//
+	// with lazy evaluation using Eval
+	chart = Expr(
+		spcChart( Here:dict[partnum], paramname )
+	);
 	
+	//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 	// Histogram
-	hist = spcHist( Here:dict[partnum], paramname );
-	
-	// Summary
-	dt_summary = summaryTbl();
-	Here:dict["Summary"] = dt_summary;
+	//
+	// with lazy evaluation using Eval
+	hist = Expr(
+		spcHist( Here:dict[partnum], paramname )
+	);
 
-	dt_summary << Add Rows( 1 );
-	Column( dt_summary, "Part Number" )[1] = partnum;
-	Column( dt_summary, "Parameter Name" )[1] = paramname;
-	Column( dt_summary, "LSL" )[1] = lsl;
-	Column( dt_summary, "USL" )[1] = usl;
+	//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+	// Combine Chart & Histogram
+	//
+	// reference:
+	// https://community.jmp.com/t5/Discussions/For-Loop-inside-a-tab-box-where-each-loop-creates-a-different/td-p/83805
+	report_analysis = New Window( "Analysis Report", Show Menu( 0 ), Show Toolbars( 0 ), tb = Tab Box() );
+	tb << Add( Tab Page Box( report_title, H List Box( chart, hist ) ) );	
+
+	//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+	// Summary
+	Here:dt_summary = summaryTbl(); // 'dt_summary' should be 'Here' namespace for future implementation
+	Here:dict["Summary"] = Here:dt_summary;
+	// Add 1 row
+	Here:dt_summary << Add Rows( 1 );
+	Column( Here:dt_summary, "Part Number" )[1] = partnum;
+	Column( Here:dt_summary, "Parameter Name" )[1] = paramname;
+	// Spec Limits
+	Column( Here:dt_summary, "LSL" )[1] = getCellValue( Here:dict["Master"], "LSL", idx );
+	Column( Here:dt_summary, "USL" )[1] = getCellValue( Here:dict["Master"], "USL", idx );
 	
+	//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 	// Summary Report
-	report = New Window( "Summary Report", H List Box( Outline Box( "Summary", tbl = dt_summary << Get As Report ) ), );
+	report_summary = New Window( "Summary Report",
+		Show Menu( 0 ),
+		Show Toolbars( 0 ),
+		H List Box( Outline Box( "Summary", tbl = Here:dt_summary << Get As Report ) ), 
+
+	);
+);
+
+/*******************************************************************************
+ mainWin
+
+ description
+   Generate Main GUI Window
+
+ arguments
+   dispList  : list of pair of PART NUMBER & PARAMETER
+
+ return
+   instance of this window 
+ *******************************************************************************/
+mainWin = Function( {dispList},
+	{Default Local},
+	Here:mw = New Window( Concat Items( {"SPC Control Limit", Here:app_ver}, " " ),
+		Show Menu( 0 ),
+		Show Toolbars( 0 ),
+		H List Box(
+			Spacer Box( size( 5, 0 ) ),
+			Panel Box( "Parameter", Here:lbox = List Box( dispList, width( 500 ), nLines( 10 ), max selected( 1 ) ) ),
+			Panel Box( "Action",
+				Lineup Box( N Col( 1 ), 
+					// Evaluate CL button
+					but_plot = Button Box( "Eval", evalCL( Here:lbox ) ),
+					but_plot << Set Icon( "FunctionalDataExplorer" ),
+					but_plot << Set Icon Location( "left" ), 
+					// Quit button
+					but_quit = Button Box( "Quit", quitApp( Here:mw ) ),
+					but_quit << Set Icon( "Close" ),
+					but_quit << Set Icon Location( "left" )
+				)
+			),
+			Spacer Box( size( 5, 0 ) )
+		)
+	);
+	Return( Here:mw );
 );
 
 /*******************************************************************************
@@ -392,7 +455,6 @@ quitApp = Function( {win},
 	// Close Application Window
 	win << Close Window();
 );
-
 
 /*******************************************************************************
   MAIN
@@ -442,29 +504,8 @@ For( i = 1, i <= N Items( partlist ), i++,
 // Concatenate 2 columns in to one list
 elementList = concatTwoCols( dict["Master"], "Part Number", "Parameter Name" );
 
-// ---------------------------------------------------------------------------
-//  Main Window
-win_main = New Window( Concat Items( {"SPC Control Limit", app_ver}, " " ),
-	Show Menu( 0 ),
-	Show Toolbars( 0 ),
-	H List Box(
-		Spacer Box( size( 5, 0 ) ),
-		Panel Box( "Parameter", lbox = List Box( elementList, width( 500 ), nLines( 10 ), max selected( 1 ) ) ),
-		Panel Box( "Action",
-			Lineup Box( N Col( 1 ), 
-				// Evaluate CL button
-				but_plot = Button Box( "Eval", evalCL( lbox ) ),
-				but_plot << Set Icon( "FunctionalDataExplorer" ),
-				but_plot << Set Icon Location( "left" ), 
-				// Quit button
-				but_quit = Button Box( "Quit", quitApp( win_main ) ),
-				but_quit << Set Icon( "Close" ),
-				but_quit << Set Icon Location( "left" )
-			)
-		),
-		Spacer Box( size( 5, 0 ) )
-	)
-);
+//  Main GUI Window
+win_main = mainWin( elementList );
 
 // ---
 // END OF PROGRAM
