@@ -28,11 +28,30 @@
 ********************************************************************************
 */
 
-// set namespace to local
+// set namespace to Here
+// name of 'Here' is JMP recommended name for local namespace
 Names Default To Here( 1 );
 
 // Application Version
 app_ver = "0.2"; // from 8-Jan-2021
+
+// CONSTANT
+strPART = "Part Number";
+strPARAM = "Parameter Name";
+strDIST = "Distribution";
+strCTYPE = "Chart Type";
+strTEST125 = "Test 1, 2, 5";
+strCPK = "Cpk";
+strCP = "Cp";
+strLCL = "LCL";
+strUCL = "UCL";
+strLSL = "LSL";
+strUSL = "USL";
+
+// known distionary keys
+keyMASTER = "Master";
+keySUMMARY = "Summary";
+
 /*
 --------------------------------------------------------------------------------
 *** v0.2 milestone ***
@@ -71,7 +90,7 @@ loadMaster = Function( {filename},
 	dt = Open(
 		filename,
 		invisible,
-		Worksheets( "Master" ),
+		Worksheets( Here:keyMASTER ),
 		Use for all sheets( 1 ),
 		Concatenate Worksheets( 0 ),
 		Create Concatenation Column( 0 ),
@@ -303,20 +322,20 @@ spcHist = Function( {dt, paramname},
  *******************************************************************************/
 summaryTbl = Function( {},
 	{Default Local},
-	obj = New Table( "Summary",
+	obj = New Table( Here:keySUMMARY,
 		invisible,
 		Add Rows( 0 ),
-		New Column( "Part Number", Character, "Nominal", Set Values( {} ) ),
-		New Column( "Parameter Name", Character, "Nominal", Set Values( {} ) ),
-		New Column( "Distribution", Character, "Nominal", Set Values( {} ) ),
-		New Column( "Chart Type", Character, "Nominal", Set Values( {} ) ),
-		New Column( "Test 1, 2, 5", Character, "Nominal", Set Values( {} ) ),
-		New Column( "Cpk", Numeric, "Continuous", Set Values( [] ) ),
-		New Column( "Cp", Numeric, "Continuous", Set Values( [] ) ),
-		New Column( "LCL", Numeric, "Continuous", Set Values( [] ) ),
-		New Column( "UCL", Numeric, "Continuous", Set Values( [] ) ),
-		New Column( "LSL", Numeric, "Continuous", Set Values( [] ) ),
-		New Column( "USL", Numeric, "Continuous", Set Values( [] ) )
+		New Column( Here:strPART, Character, "Nominal", Set Values( {} ) ),
+		New Column( Here:strPARAM, Character, "Nominal", Set Values( {} ) ),
+		New Column( Here:strDIST, Character, "Nominal", Set Values( {} ) ),
+		New Column( Here:strCTYPE, Character, "Nominal", Set Values( {} ) ),
+		New Column( Here:strTEST125, Character, "Nominal", Set Values( {} ) ),
+		New Column( Here:strCPK, Numeric, "Continuous", Set Values( [] ) ),
+		New Column( Here:strCP, Numeric, "Continuous", Set Values( [] ) ),
+		New Column( Here:strLCL, Numeric, "Continuous", Set Values( [] ) ),
+		New Column( Here:strUCL, Numeric, "Continuous", Set Values( [] ) ),
+		New Column( Here:strLSL, Numeric, "Continuous", Set Values( [] ) ),
+		New Column( Here:strUSL, Numeric, "Continuous", Set Values( [] ) )
 	);
 	Return( obj );
 );
@@ -334,64 +353,67 @@ summaryTbl = Function( {},
    (none) 
  *******************************************************************************/
 evalCL = Function( {listbox},
-	{Default Local},
-	If( N Items( listbox << Get Selected Indices ) == 0,
+	{Default Local}, 
+
+	listIndex = listbox << Get Selected Indices;
+	listItem = listbox << Get Selected;
+	Print( listItem );
+
+	// check number of selection on the listbox
+	If( N Items( listItem ) == 0,
 		Return()
 	); // return if no selection on the List Box
 
-	// get selected information on the List Box
-	idx = Eval( listbox << Get Selected Indices )[1];
-	report_title = Eval( listbox << Get Selected )[1];
+	// Empty Windows for Analysis Report
+	report_analysis = New Window( "Analysis Report", Show Menu( 0 ), Show Toolbars( 0 ), tbox = Tab Box() );
 
-	// Regular Expression to separate PART NUMBER and PARAMETER NAME
-	matchList = Regex Match( report_title, "^(.+)\s{2}(.+)$" );
-	partnum = matchList[2];
-	paramname = matchList[3];
+	For( i = 1, i <= N Items( listItem ), i++, 
+		// get selected information on the List Box
+		idx = listIndex[i];
+		report_title = listItem[i];
+		Print( idx );
+		Print( report_title );
 
-	//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
-	// Control Chart
-	//
-	// with lazy evaluation using Eval
-	chart = Expr(
-		spcChart( Here:dict[partnum], paramname )
+		// Regular Expression to separate PART NUMBER and PARAMETER NAME
+		matchList = Regex Match( report_title, "^(.+)\s{2}(.+)$" );
+		partnum = matchList[2];
+		paramname = matchList[3];
+
+		//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+		// Control Chart
+		//
+		// with lazy evaluation using Expr
+		chart = Expr(
+			spcChart( Here:dict[partnum], paramname )
+		);
+
+		//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+		// Histogram
+		//
+		// with lazy evaluation using Expr
+		hist = Expr(
+			spcHist( Here:dict[partnum], paramname )
+		);
+
+		//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+		// Combine Chart & Histogram
+		//
+		// reference:
+		// https://community.jmp.com/t5/Discussions/For-Loop-inside-a-tab-box-where-each-loop-creates-a-different/td-p/83805
+		//tb << Add( Tab Page Box( report_title, H List Box( chart, hist ) ) );	
+		tbox << Add( report_title, H List Box( chart, hist ) );	
 	);
-	
-	//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
-	// Histogram
-	//
-	// with lazy evaluation using Eval
-	hist = Expr(
-		spcHist( Here:dict[partnum], paramname )
-	);
 
-	//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
-	// Combine Chart & Histogram
-	//
-	// reference:
-	// https://community.jmp.com/t5/Discussions/For-Loop-inside-a-tab-box-where-each-loop-creates-a-different/td-p/83805
-	report_analysis = New Window( "Analysis Report", Show Menu( 0 ), Show Toolbars( 0 ), tb = Tab Box() );
-	tb << Add( Tab Page Box( report_title, H List Box( chart, hist ) ) );	
+	tbox << Set Selected(1),
 
-	//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
-	// Summary
-	Here:dt_summary = summaryTbl(); // 'dt_summary' should be 'Here' namespace for future implementation
-	Here:dict["Summary"] = Here:dt_summary;
-	// Add 1 row
-	Here:dt_summary << Add Rows( 1 );
-	Column( Here:dt_summary, "Part Number" )[1] = partnum;
-	Column( Here:dt_summary, "Parameter Name" )[1] = paramname;
-	// Spec Limits
-	Column( Here:dt_summary, "LSL" )[1] = getCellValue( Here:dict["Master"], "LSL", idx );
-	Column( Here:dt_summary, "USL" )[1] = getCellValue( Here:dict["Master"], "USL", idx );
-	
 	//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 	// Summary Report
-	report_summary = New Window( "Summary Report",
-		Show Menu( 0 ),
-		Show Toolbars( 0 ),
-		H List Box( Outline Box( "Summary", tbl = Here:dt_summary << Get As Report ) ), 
+	//report_summary = New Window( "Summary Report",
+	//	Show Menu( 0 ),
+	//	Show Toolbars( 0 ),
+	//	H List Box( Outline Box( "Summary", tbl = Here:dt_summary << Get As Report ) ), 
 
-	);
+	//);
 );
 
 /*******************************************************************************
@@ -413,7 +435,7 @@ mainWin = Function( {dispList},
 		Show Toolbars( 0 ),
 		H List Box(
 			Spacer Box( size( 5, 0 ) ),
-			Panel Box( "Parameter", Here:lbox = List Box( dispList, width( 500 ), nLines( 10 ), max selected( 1 ) ) ),
+			Panel Box( "Parameter", Here:lbox = List Box( dispList, width( 500 ), nLines( 10 ), max selected( N Items( dispList ) ) ) ),
 			Panel Box( "Action",
 				Lineup Box( N Col( 1 ), 
 					// Evaluate CL button
@@ -457,7 +479,7 @@ quitApp = Function( {win},
 );
 
 /*******************************************************************************
-  MAIN
+  MAIN (Namespace: Here)
  *******************************************************************************/
 
 // select file to read
@@ -482,17 +504,17 @@ If( filename == "",
 dict = Associative Array();
 
 // Open Master sheet of filename and register disctionary
-dict["Master"] = loadMaster( filename );
+dict[keyMASTER] = loadMaster( filename );
 
 // Delete rows where column 1, "Part Number" is empty 
-deleteEmptyRow( dict["Master"], "Part Number" );
+deleteEmptyRow( dict[keyMASTER], strPART );
 
 // Extract list of unique "Part Number" using Associative Array
 //   Note:      Associative Array allows unique keys and this is a kind of
 //              technique to extract unique value from list using Associative Array.
 //
 //   Reference: https://community.jmp.com/t5/JSL-Cookbook/Get-a-list-of-the-unique-values-in-a-column-matrix-or-list/ta-p/51256
-partlist_all = Column( dict["Master"], "Part Number" ) << Get Values;
+partlist_all = Column( dict[keyMASTER], strPART ) << Get Values;
 partlist = Associative Array( partlist_all ) << Get Keys;
 
 // Open data sheet and register instance to disctionary
@@ -502,7 +524,8 @@ For( i = 1, i <= N Items( partlist ), i++,
 );
 
 // Concatenate 2 columns in to one list
-elementList = concatTwoCols( dict["Master"], "Part Number", "Parameter Name" );
+elementList = concatTwoCols( dict[keyMASTER], strPART, strPARAM );
+
 
 //  Main GUI Window
 win_main = mainWin( elementList );
