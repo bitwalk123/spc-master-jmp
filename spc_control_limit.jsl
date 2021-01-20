@@ -50,7 +50,7 @@ strUSL = "USL";
 
 // known distionary keys
 keyMASTER = "Master";
-keySUMMARY = "Summary";
+keyREPORT = "Report";
 
 /*
 --------------------------------------------------------------------------------
@@ -246,24 +246,46 @@ getCellValue = Function( {dt, colname, row},
  arguments
    dt        : data table
    paramname : PARAMETER NAME
+   lsl       : LSL
+   usl       : USL
+   type      : "Moving Range" (default), "Levey Jennings"
  
  return
    instance of the SPC Control Chart
  *******************************************************************************/
-spcChart = Function( {dt, paramname},
+spcChart = Function( {dt, paramname, lsl, usl, type = "Moving Range"},
 	{Default Local},
-	obj = Control Chart(
-		Group Size( 1 ),
-		KSigma( 3 ),
-		Chart Col( Column( dt, paramname ) ),
-		Chart Type( Individual Measurement ),
-		Alarm Script( Write( "\!NOut of Control for test ", qc_test, " in column ", qc_col, " in sample ", qc_sample ) )
-	);
-	obj << Test 1( 1 );
-	obj << Test 2( 1 );
-	obj << Test 5( 1 );
+	Eval(
+		Substitute(
+				Expr(
+					obj = __dt__ << Control Chart Builder(
+						Show Two Shewhart Charts( 0 ),
+						Show Control Panel( 0 ),
+						Show Alarm Report( 1 ),
+						Variables( Y( Column( __param__ ) ) ),
+						Chart(
+							Points( Statistic( "Individual" ) ),
+							Limits( Sigma( __type__ ), Shade Zones( 1 ), Show Center Line( 1 ) ),
+							Warnings( Test 1( 1 ), Test 2( 1 ), Test 5( 1 ) ),
+							Add Spec Limits( {LSL( __lsl__ ), USL( __usl__ )} ),
+							Process Capability Analysis(
+								Process Summary( 0 ),
+								Nonconformance( 0 ),
+								Within Sigma Capability( 0 ),
+								Histogram( 1, Show Within Sigma Density( 0 ) )
+							)
+						)
+					);
+					Return( obj );
+				),
+			Expr( __dt__ ), dt,
+			Expr( __param__ ), paramname,
+			Expr( __lsl__ ), lsl,
+			Expr( __usl__ ), usl,
+			Expr( __type__ ), type, 
 
-	Return( obj );
+		)
+	)
 );
 
 /*******************************************************************************
@@ -280,25 +302,21 @@ spcChart = Function( {dt, paramname},
    instance of the Distribution report
  *******************************************************************************/
 spcHist = Function( {dt, paramname},
-	{Default Local}, 
-	// https://community.jmp.com/t5/Discussions/How-to-manage-display-hide-Test-n-in-Warnings-of-Control-Chart/td-p/341481
+	{Default Local},
 	Eval(
 		Substitute(
 				Expr(
 					obj = __dt__ << Distribution(
-						Show Menu( 0 ),
-						Show Toolbars( 0 ),
 						Continuous Distribution(
 							Column( __param__ ),
 							Quantiles( 0 ),
+							Summary Statistics( 0 ),
+							Histogram( 0 ),
 							Vertical( 0 ),
-							Count Axis( 1 ),
-							Fit Distribution( Normal( Goodness of Fit( 1 ) ) )
+							Normal Quantile Plot( 1 ),
+							Fit Normal( Goodness of Fit( 1 ) )
 						),
-						SendToReport(
-							Dispatch( {__param__}, "Summary Statistics", OutlineBox, {Close( 1 )} ),
-							Dispatch( {__param__, "Fitted Normal"}, "Parameter Estimates", OutlineBox, {Close( 1 )} )
-						)
+						SendToReport( Dispatch( {__param__}, "Compare Distributions", OutlineBox, {Close( 1 )} ) )
 					);
 					Return( obj );
 				),
@@ -306,38 +324,6 @@ spcHist = Function( {dt, paramname},
 			Expr( __param__ ), paramname
 		)
 	)
-);
-
-/*******************************************************************************
- summaryTbl
-
- description
-   generate empty (row = 0) summary table
-
- arguments
-   (none)
-
- return
-   (none) 
- *******************************************************************************/
-summaryTbl = Function( {},
-	{Default Local},
-	obj = New Table( Here:keySUMMARY,
-		invisible,
-		Add Rows( 0 ),
-		New Column( Here:strPART, Character, "Nominal", Set Values( {} ) ),
-		New Column( Here:strPARAM, Character, "Nominal", Set Values( {} ) ),
-		New Column( Here:strDIST, Character, "Nominal", Set Values( {} ) ),
-		New Column( Here:strCTYPE, Character, "Nominal", Set Values( {} ) ),
-		New Column( Here:strTEST125, Character, "Nominal", Set Values( {} ) ),
-		New Column( Here:strCPK, Numeric, "Continuous", Set Values( [] ) ),
-		New Column( Here:strCP, Numeric, "Continuous", Set Values( [] ) ),
-		New Column( Here:strLCL, Numeric, "Continuous", Set Values( [] ) ),
-		New Column( Here:strUCL, Numeric, "Continuous", Set Values( [] ) ),
-		New Column( Here:strLSL, Numeric, "Continuous", Set Values( [] ) ),
-		New Column( Here:strUSL, Numeric, "Continuous", Set Values( [] ) )
-	);
-	Return( obj );
 );
 
 /*******************************************************************************
@@ -357,7 +343,6 @@ evalCL = Function( {listbox},
 
 	listIndex = listbox << Get Selected Indices;
 	listItem = listbox << Get Selected;
-	Print( listItem );
 
 	// check number of selection on the listbox
 	If( N Items( listItem ) == 0,
@@ -365,55 +350,92 @@ evalCL = Function( {listbox},
 	); // return if no selection on the List Box
 
 	// Empty Windows for Analysis Report
-	report_analysis = New Window( "Analysis Report", Show Menu( 0 ), Show Toolbars( 0 ), tbox = Tab Box() );
+	Here:Report = New Window( "Analysis Report",
+		Show Menu( 0 ),
+		Show Toolbars( 0 ),
+		V List Box( tbox = Tab Box(), summary = H List Box() )
+	);
+
+	listPartnum = {};
+	listParamname = {};
+	listDist = {};
+	listChartType = {};
+	listTest125 = {};
+	listCp = {};
+	listCpk = {};
+	listLCL = {};
+	listUCL = {};
+	listLSL = {};
+	listUSL = {};
 
 	For( i = 1, i <= N Items( listItem ), i++, 
 		// get selected information on the List Box
 		idx = listIndex[i];
 		report_title = listItem[i];
-		Print( idx );
-		Print( report_title );
 
 		// Regular Expression to separate PART NUMBER and PARAMETER NAME
 		matchList = Regex Match( report_title, "^(.+)\s{2}(.+)$" );
 		partnum = matchList[2];
 		paramname = matchList[3];
 
+		// Spec Limits
+		lsl = getCellValue( Here:dict[Here:keyMASTER], Here:strLSL, idx );
+		usl = getCellValue( Here:dict[Here:keyMASTER], Here:strUSL, idx );
+	
+		// Collect information for summary table
+		listPartnum = Insert( listPartnum, partnum );
+		listParamname = Insert( listParamname, paramname );
+		listDist = Insert( listDist, "" );
+		listChartType = Insert( listChartType, "" );
+		listTest125 = Insert( listTest125, "" );
+		listCp = Insert( listCp, . );
+		listCpk = Insert( listCpk, . );
+		listLCL = Insert( listLCL, . );
+		listUCL = Insert( listUCL, . );
+		listLSL = Insert( listLSL, lsl );
+		listUSL = Insert( listUSL, usl );
+
 		//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 		// Control Chart
-		//
-		// with lazy evaluation using Expr
 		chart = Expr(
-			spcChart( Here:dict[partnum], paramname )
+			spcChart( Here:dict[partnum], paramname, lsl, usl )
 		);
 
 		//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 		// Histogram
-		//
-		// with lazy evaluation using Expr
 		hist = Expr(
 			spcHist( Here:dict[partnum], paramname )
 		);
 
-		//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 		// Combine Chart & Histogram
 		//
 		// reference:
 		// https://community.jmp.com/t5/Discussions/For-Loop-inside-a-tab-box-where-each-loop-creates-a-different/td-p/83805
-		//tb << Add( Tab Page Box( report_title, H List Box( chart, hist ) ) );	
-		tbox << Add( report_title, H List Box( chart, hist ) );	
+		tbox << Add( report_title, H List Box( chart, hist ) );
 	);
-
-	tbox << Set Selected(1),
-
+	
+	tbox << Set Selected( 1 );
+	
 	//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
-	// Summary Report
-	//report_summary = New Window( "Summary Report",
-	//	Show Menu( 0 ),
-	//	Show Toolbars( 0 ),
-	//	H List Box( Outline Box( "Summary", tbl = Here:dt_summary << Get As Report ) ), 
+	// Summary Table
+	tbl_summary = Expr(
+		Table Box(
+			String Col Edit Box( Here:strPART, listPartnum ),
+			String Col Edit Box( Here:strPARAM, listParamname ),
+			String Col Edit Box( Here:strDIST, listDist ),
+			String Col Edit Box( Here:strCTYPE, listChartType ),
+			String Col Edit Box( Here:strTEST125, listTest125 ),
+			Number Col Edit Box( Here:strCP, listCp ),
+			Number Col Edit Box( Here:strCPK, listCpk ),
+			Number Col Edit Box( Here:strLCL, listLCL ),
+			Number Col Edit Box( Here:strUCL, listUCL ),
+			Number Col Edit Box( Here:strLSL, listLSL ),
+			Number Col Edit Box( Here:strUSL, listUSL ), 
 
-	//);
+		)
+	);
+	tbl_summary << Show Window( 0 );
+	summary << Append( Outline Box( "Summary", tbl_summary ) );
 );
 
 /*******************************************************************************
@@ -472,8 +494,12 @@ quitApp = Function( {win},
 	//
 	//   reference: https://community.jmp.com/t5/JSL-Cookbook/Looping-through-an-Associative-Array-s-elements/ta-p/236892
 	For( dt = Here:dict << first, !Is Empty( dt ), dt = Here:dict << next( dt ),
-		Close( dt, "No Save" )
+		Try( Close( dt, "No Save" ) )
 	);
+
+	// Clode Report Window
+	Try( Here:Report << Close Window() );
+
 	// Close Application Window
 	win << Close Window();
 );
@@ -525,7 +551,6 @@ For( i = 1, i <= N Items( partlist ), i++,
 
 // Concatenate 2 columns in to one list
 elementList = concatTwoCols( dict[keyMASTER], strPART, strPARAM );
-
 
 //  Main GUI Window
 win_main = mainWin( elementList );
