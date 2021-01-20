@@ -33,7 +33,7 @@
 Names Default To Here( 1 );
 
 // Application Version
-app_ver = "0.2"; // from 8-Jan-2021
+app_ver = "0.3"; // from 20-Jan-2021
 
 // CONSTANT
 strPART = "Part Number";
@@ -385,27 +385,51 @@ evalCL = Function( {listbox},
 		// Collect information for summary table
 		listPartnum = Insert( listPartnum, partnum );
 		listParamname = Insert( listParamname, paramname );
-		listDist = Insert( listDist, "" );
-		listChartType = Insert( listChartType, "" );
-		listTest125 = Insert( listTest125, "" );
-		listCp = Insert( listCp, . );
-		listCpk = Insert( listCpk, . );
-		listLCL = Insert( listLCL, . );
-		listUCL = Insert( listUCL, . );
 		listLSL = Insert( listLSL, lsl );
 		listUSL = Insert( listUSL, usl );
-
-		//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
-		// Control Chart
-		chart = Expr(
-			spcChart( Here:dict[partnum], paramname, lsl, usl )
-		);
 
 		//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 		// Histogram
 		hist = Expr(
 			spcHist( Here:dict[partnum], paramname )
 		);
+		//----------------------------------------------------------------------
+		// obtain result of Shapiro-Wilk test to determin Chart Type
+		//
+		// CAUTION: THIS IS HARD CODED!! IT DEPENDS ON REPORT LAYOUT
+		reportHist = hist << Report << Minimize Window( 1 );
+		prob = reportHist[Outline Box( 5 )][Number Col Box( 2 )] << Get( 1 );
+		reportHist << Close Window();
+		// add indices for summary table
+		Normality = If( prob > 0.05, "Normal", "Non-Normal");
+		listDist = Insert( listDist, Normality );
+		chartType = If( prob > 0.05, "LJ", "IR");
+		listChartType = Insert( listChartType, chartType );
+
+		//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+		// Control Chart
+		type = If( prob > 0.05, "Levey Jennings", "Moving Range");
+		chart = Expr(
+			spcChart( Here:dict[partnum], paramname, lsl, usl, type )
+		);
+		//----------------------------------------------------------------------
+		// obtain control limits, warnings and indices of process capability
+		//
+		// CAUTION: THIS IS HARD CODED!! IT DEPENDS ON REPORT LAYOUT
+		reportChart = chart << Report << Minimize Window( 1 );
+		lcl = reportChart[Outline Box( 2 )][Number Col Box( 1 )] << Get( 1 );
+		ucl = reportChart[Outline Box( 2 )][Number Col Box( 3 )] << Get( 1 );
+		ooc = reportChart[Outline Box( 3 )][Number Col Box( 1 )] << Get( 1 );
+		cpk = reportChart[Outline Box( 4 )][Number Col Box( 1 )] << Get( 1 );
+		cp = reportChart[Outline Box( 4 )][Number Col Box( 1 )] << Get( 4 );
+		reportChart << Close Window();
+		// add indices for summary table
+		listLCL = Insert( listLCL, lcl );
+		listUCL = Insert( listUCL, ucl );
+		ooc_test = If( ooc > 0, "Fail", "Pass");
+		listTest125 = Insert( listTest125, ooc_test );
+		listCpk = Insert( listCpk, cpk );
+		listCp = Insert( listCp, cp );
 
 		// Combine Chart & Histogram
 		//
@@ -425,8 +449,8 @@ evalCL = Function( {listbox},
 			String Col Edit Box( Here:strDIST, listDist ),
 			String Col Edit Box( Here:strCTYPE, listChartType ),
 			String Col Edit Box( Here:strTEST125, listTest125 ),
-			Number Col Edit Box( Here:strCP, listCp ),
 			Number Col Edit Box( Here:strCPK, listCpk ),
+			Number Col Edit Box( Here:strCP, listCp ),
 			Number Col Edit Box( Here:strLCL, listLCL ),
 			Number Col Edit Box( Here:strUCL, listUCL ),
 			Number Col Edit Box( Here:strLSL, listLSL ),
