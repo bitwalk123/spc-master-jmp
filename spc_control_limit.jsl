@@ -32,8 +32,18 @@
 // name of 'Here' is JMP recommended name for local namespace
 Names Default To Here( 1 );
 
+/*
+--------------------------------------------------------------------------------
+*** v0.3 milestone ***
+
+implement all of required functionality
+--------------------------------------------------------------------------------
+*/
 // Application Version
 app_ver = "0.3"; // from 20-Jan-2021
+
+// JMP version required to run this script
+minJMPVerRequired = 15;
 
 // CONSTANT
 strPART = "Part Number";
@@ -52,14 +62,6 @@ strUSL = "USL";
 keyMASTER = "Master";
 keyREPORT = "Report";
 
-/*
---------------------------------------------------------------------------------
-*** v0.2 milestone ***
-
-implement reporting function for all parameters
---------------------------------------------------------------------------------
-*/
-
 // dialog for 'Not Implemented Yet'!
 notImplemented = Expr(
 	New Window( "Sorry!",
@@ -71,6 +73,20 @@ notImplemented = Expr(
 			H List Box( Spacer Box( size( 120, 0 ) ), but_ok = Button Box( "OK" ), but_ok << set icon( "RangeCheck" ) )
 		)
 	)
+);
+
+/*******************************************************************************
+ loadMaster
+ *******************************************************************************/
+checkJMPVersion = Function( {},
+	{Default Local},
+	verStr = JMP Version();
+	matchList = Regex Match( verStr, "^([0-9]+)\.(.+)$" );
+	curMajorVer = Num( matchList[2] );
+	If( curMajorVer < Here:minJMPVerRequired,
+		Return( 1 ),
+		Return( 0 )
+	);
 );
 
 /*******************************************************************************
@@ -401,14 +417,20 @@ evalCL = Function( {listbox},
 		prob = reportHist[Outline Box( 5 )][Number Col Box( 2 )] << Get( 1 );
 		reportHist << Close Window();
 		// add indices for summary table
-		Normality = If( prob > 0.05, "Normal", "Non-Normal");
+		Normality = If( prob > 0.05,
+			"Normal",
+			"Non-Normal"
+		);
 		listDist = Insert( listDist, Normality );
-		chartType = If( prob > 0.05, "LJ", "IR");
+		chartType = If( prob > 0.05, "LJ", "IR" );
 		listChartType = Insert( listChartType, chartType );
 
 		//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 		// Control Chart
-		type = If( prob > 0.05, "Levey Jennings", "Moving Range");
+		type = If( prob > 0.05,
+			"Levey Jennings",
+			"Moving Range"
+		);
 		chart = Expr(
 			spcChart( Here:dict[partnum], paramname, lsl, usl, type )
 		);
@@ -426,7 +448,7 @@ evalCL = Function( {listbox},
 		// add indices for summary table
 		listLCL = Insert( listLCL, lcl );
 		listUCL = Insert( listUCL, ucl );
-		ooc_test = If( ooc > 0, "Fail", "Pass");
+		ooc_test = If( ooc > 0, "Fail", "Pass" );
 		listTest125 = Insert( listTest125, ooc_test );
 		listCpk = Insert( listCpk, cpk );
 		listCp = Insert( listCp, cp );
@@ -531,6 +553,9 @@ quitApp = Function( {win},
 /*******************************************************************************
   MAIN (Namespace: Here)
  *******************************************************************************/
+If( checkJMPVersion(),
+	Throw( "!Required JMP version is at least " || Char( minJMPVerRequired ) )
+);
 
 // select file to read
 filename = Pick File(
