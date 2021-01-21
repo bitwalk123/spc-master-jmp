@@ -1,7 +1,7 @@
 ﻿/*
 ********************************************************************************
 
- SPC Control Limit for JMP - SPC Control Limit evaluation tool
+ SPC Master for JMP
 
 --------------------------------------------------------------------------------
  MIT License
@@ -426,7 +426,7 @@ spcHist = Function( {dt, paramname},
 );
 
 /*******************************************************************************
- evalCL
+ spcReport
 
  description
    evaluate control limit
@@ -437,7 +437,7 @@ spcHist = Function( {dt, paramname},
  return
    (none) 
  *******************************************************************************/
-evalCL = Function( {listbox},
+spcReport = Function( {listbox},
 	{i}, // 'i' is usually used for loop counter
 	listIndex = listbox << Get Selected Indices;
 	listItem = listbox << Get Selected;
@@ -591,7 +591,7 @@ evalCL = Function( {listbox},
    instance of this window 
  *******************************************************************************/
 mainWin = Function( {dispList},
-	win = New Window( Concat Items( {"SPC Control Limit", Here:app_ver}, " " ),
+	win = New Window( Concat Items( {"SPC Master", Here:app_ver}, " " ),
 		Show Menu( 0 ),
 		Show Toolbars( 0 ),
 		H List Box(
@@ -600,7 +600,7 @@ mainWin = Function( {dispList},
 			Panel Box( "Action",
 				Lineup Box( N Col( 1 ), 
 					// Evaluate CL button
-					but_plot = Button Box( "Eval", evalCL( Here:lbox ) ), // 'Here:' is needed to pass this to other function from button click.
+					but_plot = Button Box( "Report", spcReport( Here:lbox ) ), // 'Here:' is needed to pass this to other function from button click.
 					but_plot << Set Icon( "FunctionalDataExplorer" ),
 					but_plot << Set Icon Location( "left" ), 
 					// Quit button
