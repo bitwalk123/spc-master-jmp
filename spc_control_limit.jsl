@@ -43,7 +43,7 @@ implement all of required functionality
 app_ver = "0.3"; // from 20-Jan-2021
 
 // JMP version required to run this script
-minJMPVerRequired = 15;
+minJMPVerRequired = 14;
 
 // CONSTANT
 strPART = "Part Number";
@@ -76,14 +76,27 @@ notImplemented = Expr(
 );
 
 /*******************************************************************************
- loadMaster
+ checkJMPVersion
+
+ description
+   Check if current JMP version meets minimum requirement
+
+ arguments
+   minJmpVer : minimum major version of JMP
+
+ return
+   1 : current JMP version is below requiement
+   0 : current JNP version meets requirement to run this application
  *******************************************************************************/
-checkJMPVersion = Function( {},
-	{Default Local},
+checkJMPVersion = Function( {minJmpVer}, 
+	// obtain current JMP version
 	verStr = JMP Version();
+	// extract major version string with Regular Expression
 	matchList = Regex Match( verStr, "^([0-9]+)\.(.+)$" );
+	// convert major version string to number
 	curMajorVer = Num( matchList[2] );
-	If( curMajorVer < Here:minJMPVerRequired,
+	// return 1 if current JMP version is below requiement, otherwise return 0
+	If( curMajorVer < minJMPVer,
 		Return( 1 ),
 		Return( 0 )
 	);
@@ -102,11 +115,10 @@ checkJMPVersion = Function( {},
    data table
  *******************************************************************************/
 loadMaster = Function( {filename},
-	{Default Local},
 	dt = Open(
 		filename,
 		invisible,
-		Worksheets( Here:keyMASTER ),
+		Worksheets( "Master" ),
 		Use for all sheets( 1 ),
 		Concatenate Worksheets( 0 ),
 		Create Concatenation Column( 0 ),
@@ -148,7 +160,6 @@ loadMaster = Function( {filename},
    data table
  *******************************************************************************/
 loadPart = Function( {filename, partnum},
-	{Default Local},
 	dt = Open(
 		filename,
 		invisible,
@@ -194,7 +205,6 @@ loadPart = Function( {filename, partnum},
    (none)
  *******************************************************************************/
 deleteEmptyRow = Function( {dt, colname},
-	{Default Local},
 	rows = N Rows( dt );
 	For( r = rows, r > 0, r--,
 		pn = Column( colname )[r];
@@ -220,7 +230,7 @@ deleteEmptyRow = Function( {dt, colname},
    list of element of colname1 || sep || element of colname2
  *******************************************************************************/
 concatTwoCols = Function( {dt, colname1, colname2, sep = "  "},
-	{Default Local},
+	{r}, // 'r' is used for loop counter
 	rows = N Rows( dt );
 	elementList = {};
 	For( r = 1, r <= rows, r++,
@@ -248,9 +258,35 @@ concatTwoCols = Function( {dt, colname1, colname2, sep = "  "},
    velue at specified column name and row
  *******************************************************************************/
 getCellValue = Function( {dt, colname, row},
-	{Default Local},
 	value = Column( dt, colname )[row];
 	Return( value );
+);
+
+/*******************************************************************************
+ countOOC
+
+ description
+   Count number of OOC. This is for JMP 14.
+   Note: JMP 15 has easier way to get OOC count.
+
+ arguments
+   chart : instance of Control Chart Builder
+
+ return
+   OOC count 
+ *******************************************************************************/
+countOOC = Function( {chart},
+	{i}, // 'i' is usually used for loop counter
+	dt = chart << Save Summaries();
+	listFail = Column( dt, "Test Failures" ) << Get Values();
+	count = 0;
+	For( i = 1, i <= N Items( listFail ), i++,
+		value = listFail[i];
+		count = count + If( value == "", 0, 1 );
+	);
+	Close( dt, "No Save" );
+	chart << Close Window();
+	Return( count );
 );
 
 /*******************************************************************************
@@ -270,26 +306,19 @@ getCellValue = Function( {dt, colname, row},
    instance of the SPC Control Chart
  *******************************************************************************/
 spcChart = Function( {dt, paramname, lsl, usl, type = "Moving Range"},
-	{Default Local},
 	Eval(
 		Substitute(
 				Expr(
 					obj = __dt__ << Control Chart Builder(
 						Show Two Shewhart Charts( 0 ),
-						Show Control Panel( 0 ),
-						Show Alarm Report( 1 ),
+						Show Control Panel( 0 ), 
+						//Show Alarm Report( 1 ),
 						Variables( Y( Column( __param__ ) ) ),
 						Chart(
 							Points( Statistic( "Individual" ) ),
-							Limits( Sigma( __type__ ), Shade Zones( 1 ), Show Center Line( 1 ) ),
+							Limits( Sigma( __type__ ) ),
 							Warnings( Test 1( 1 ), Test 2( 1 ), Test 5( 1 ) ),
-							Add Spec Limits( {LSL( __lsl__ ), USL( __usl__ )} ),
-							Process Capability Analysis(
-								Process Summary( 0 ),
-								Nonconformance( 0 ),
-								Within Sigma Capability( 0 ),
-								Histogram( 1, Show Within Sigma Density( 0 ) )
-							)
+							Add Spec Limits( {LSL( __lsl__ ), USL( __usl__ )} )
 						)
 					);
 					Return( obj );
@@ -298,8 +327,7 @@ spcChart = Function( {dt, paramname, lsl, usl, type = "Moving Range"},
 			Expr( __param__ ), paramname,
 			Expr( __lsl__ ), lsl,
 			Expr( __usl__ ), usl,
-			Expr( __type__ ), type, 
-
+			Expr( __type__ ), type
 		)
 	)
 );
@@ -318,7 +346,6 @@ spcChart = Function( {dt, paramname, lsl, usl, type = "Moving Range"},
    instance of the Distribution report
  *******************************************************************************/
 spcHist = Function( {dt, paramname},
-	{Default Local},
 	Eval(
 		Substitute(
 				Expr(
@@ -327,12 +354,14 @@ spcHist = Function( {dt, paramname},
 							Column( __param__ ),
 							Quantiles( 0 ),
 							Summary Statistics( 0 ),
+							Horizontal Layout( 1 ),
 							Histogram( 0 ),
 							Vertical( 0 ),
-							Normal Quantile Plot( 1 ),
-							Fit Normal( Goodness of Fit( 1 ) )
-						),
-						SendToReport( Dispatch( {__param__}, "Compare Distributions", OutlineBox, {Close( 1 )} ) )
+							Normal Quantile Plot( 1 ), 
+							//Fit Normal( Goodness of Fit( 1 ) )
+							Fit Distribution( Normal( Goodness of Fit( 1 ) ) ) // for JMP 14
+
+						)
 					);
 					Return( obj );
 				),
@@ -355,8 +384,7 @@ spcHist = Function( {dt, paramname},
    (none) 
  *******************************************************************************/
 evalCL = Function( {listbox},
-	{Default Local}, 
-
+	{i}, // 'i' is usually used for loop counter
 	listIndex = listbox << Get Selected Indices;
 	listItem = listbox << Get Selected;
 
@@ -365,13 +393,11 @@ evalCL = Function( {listbox},
 		Return()
 	); // return if no selection on the List Box
 
+	//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 	// Empty Windows for Analysis Report
-	Here:Report = New Window( "Analysis Report",
-		Show Menu( 0 ),
-		Show Toolbars( 0 ),
-		V List Box( tbox = Tab Box(), summary = H List Box() )
-	);
+	Here:Report = New Window( "Analysis Report", Show Menu( 1 ), Show Toolbars( 1 ), main = V List Box( summary = H List Box(), tbox = Tab Box() ) );
 
+	// Initial column list for Summary
 	listPartnum = {};
 	listParamname = {};
 	listDist = {};
@@ -384,6 +410,7 @@ evalCL = Function( {listbox},
 	listLSL = {};
 	listUSL = {};
 
+	// Loop for each SPC parameter
 	For( i = 1, i <= N Items( listItem ), i++, 
 		// get selected information on the List Box
 		idx = listIndex[i];
@@ -394,6 +421,11 @@ evalCL = Function( {listbox},
 		partnum = matchList[2];
 		paramname = matchList[3];
 
+		/*
+		 * JMP Function() can refer variable outside in the same 'Here' namescope. This is confusing!
+		 * In other usual language, it does not allow to refer variable outside of the function without special treatment.
+		 * In this scripting, intentinally 'Here:' qualifier is added to the variable name outside of this function but in 'Here' namespace.
+		 */
 		// Spec Limits
 		lsl = getCellValue( Here:dict[Here:keyMASTER], Here:strLSL, idx );
 		usl = getCellValue( Here:dict[Here:keyMASTER], Here:strUSL, idx );
@@ -409,10 +441,12 @@ evalCL = Function( {listbox},
 		hist = Expr(
 			spcHist( Here:dict[partnum], paramname )
 		);
+
 		//----------------------------------------------------------------------
 		// obtain result of Shapiro-Wilk test to determin Chart Type
 		//
 		// CAUTION: THIS IS HARD CODED!! IT DEPENDS ON REPORT LAYOUT
+		// *** POTENTIAL JMP VERSION INCOMPATIVILITY COULD EXIST! ***
 		reportHist = hist << Report << Minimize Window( 1 );
 		prob = reportHist[Outline Box( 5 )][Number Col Box( 2 )] << Get( 1 );
 		reportHist << Close Window();
@@ -434,20 +468,22 @@ evalCL = Function( {listbox},
 		chart = Expr(
 			spcChart( Here:dict[partnum], paramname, lsl, usl, type )
 		);
+
 		//----------------------------------------------------------------------
 		// obtain control limits, warnings and indices of process capability
 		//
 		// CAUTION: THIS IS HARD CODED!! IT DEPENDS ON REPORT LAYOUT
+		// *** POTENTIAL JMP VERSION INCOMPATIVILITY COULD EXIST! ***
 		reportChart = chart << Report << Minimize Window( 1 );
 		lcl = reportChart[Outline Box( 2 )][Number Col Box( 1 )] << Get( 1 );
 		ucl = reportChart[Outline Box( 2 )][Number Col Box( 3 )] << Get( 1 );
-		ooc = reportChart[Outline Box( 3 )][Number Col Box( 1 )] << Get( 1 );
-		cpk = reportChart[Outline Box( 4 )][Number Col Box( 1 )] << Get( 1 );
-		cp = reportChart[Outline Box( 4 )][Number Col Box( 1 )] << Get( 4 );
+		cpk = reportChart[Outline Box( 7 )][Number Col Box( 1 )] << Get( 1 );
+		cp = reportChart[Outline Box( 7 )][Number Col Box( 1 )] << Get( 4 );
 		reportChart << Close Window();
 		// add indices for summary table
 		listLCL = Insert( listLCL, lcl );
 		listUCL = Insert( listUCL, ucl );
+		ooc = countOOC( chart );
 		ooc_test = If( ooc > 0, "Fail", "Pass" );
 		listTest125 = Insert( listTest125, ooc_test );
 		listCpk = Insert( listCpk, cpk );
@@ -457,14 +493,18 @@ evalCL = Function( {listbox},
 		//
 		// reference:
 		// https://community.jmp.com/t5/Discussions/For-Loop-inside-a-tab-box-where-each-loop-creates-a-different/td-p/83805
-		tbox << Add( report_title, H List Box( chart, hist ) );
+		tbox << Add( report_title, V List Box( hist, chart ) );
 	);
+	tbox << Set Selected( 1 ); // Show first tab
 	
-	tbox << Set Selected( 1 );
-	
+
 	//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 	// Summary Table
-	tbl_summary = Expr(
+	//
+	// JMP Function() can refer variable outside in the same 'Here' namescope. This is confusing!
+	// In other usual language, it does not allow to refer variable outside of the function without special treatment.
+	// In this scripting, intentinally 'Here:' qualifier is added to the variable name outside of this function but in 'Here' namespace.
+	tblSummary = Expr(
 		Table Box(
 			String Col Edit Box( Here:strPART, listPartnum ),
 			String Col Edit Box( Here:strPARAM, listParamname ),
@@ -480,8 +520,8 @@ evalCL = Function( {listbox},
 
 		)
 	);
-	tbl_summary << Show Window( 0 );
-	summary << Append( Outline Box( "Summary", tbl_summary ) );
+	tblSummary << Show Window( 0 );
+	summary << Append( Outline Box( "Summary", tblSummary ) );
 );
 
 /*******************************************************************************
@@ -497,8 +537,7 @@ evalCL = Function( {listbox},
    instance of this window 
  *******************************************************************************/
 mainWin = Function( {dispList},
-	{Default Local},
-	Here:mw = New Window( Concat Items( {"SPC Control Limit", Here:app_ver}, " " ),
+	win = New Window( Concat Items( {"SPC Control Limit", Here:app_ver}, " " ),
 		Show Menu( 0 ),
 		Show Toolbars( 0 ),
 		H List Box(
@@ -507,11 +546,11 @@ mainWin = Function( {dispList},
 			Panel Box( "Action",
 				Lineup Box( N Col( 1 ), 
 					// Evaluate CL button
-					but_plot = Button Box( "Eval", evalCL( Here:lbox ) ),
+					but_plot = Button Box( "Eval", evalCL( Here:lbox ) ), // 'Here:' is needed to pass this to other function from button click.
 					but_plot << Set Icon( "FunctionalDataExplorer" ),
 					but_plot << Set Icon Location( "left" ), 
 					// Quit button
-					but_quit = Button Box( "Quit", quitApp( Here:mw ) ),
+					but_quit = Button Box( "Quit", quitApp() ),
 					but_quit << Set Icon( "Close" ),
 					but_quit << Set Icon Location( "left" )
 				)
@@ -519,7 +558,7 @@ mainWin = Function( {dispList},
 			Spacer Box( size( 5, 0 ) )
 		)
 	);
-	Return( Here:mw );
+	Return( win );
 );
 
 /*******************************************************************************
@@ -534,8 +573,7 @@ mainWin = Function( {dispList},
  return
    (none) 
  *******************************************************************************/
-quitApp = Function( {win},
-	{Default Local}, 
+quitApp = Function( {}, 
 	// Close all tables stored in dictionary
 	//
 	//   reference: https://community.jmp.com/t5/JSL-Cookbook/Looping-through-an-Associative-Array-s-elements/ta-p/236892
@@ -547,13 +585,13 @@ quitApp = Function( {win},
 	Try( Here:Report << Close Window() );
 
 	// Close Application Window
-	win << Close Window();
+	Here:winMain << Close Window();
 );
 
 /*******************************************************************************
   MAIN (Namespace: Here)
  *******************************************************************************/
-If( checkJMPVersion(),
+If( checkJMPVersion( minJMPVerRequired ),
 	Throw( "!Required JMP version is at least " || Char( minJMPVerRequired ) )
 );
 
@@ -602,7 +640,7 @@ For( i = 1, i <= N Items( partlist ), i++,
 elementList = concatTwoCols( dict[keyMASTER], strPART, strPARAM );
 
 //  Main GUI Window
-win_main = mainWin( elementList );
+winMain = mainWin( elementList );
 
 // ---
 // END OF PROGRAM
