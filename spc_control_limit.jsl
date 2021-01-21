@@ -28,15 +28,15 @@
 ********************************************************************************
 */
 
-// set namespace to Here
-// name of 'Here' is JMP recommended name for local namespace
+// Set namespace to 'Here'
+// Name of 'Here' is JMP recommended name for local namespace
 Names Default To Here( 1 );
 
 /*
 --------------------------------------------------------------------------------
 *** v0.3 milestone ***
 
-implement all of required functionality
+Implement all of required functionality
 --------------------------------------------------------------------------------
 */
 // Application Version
@@ -58,11 +58,11 @@ strUCL = "UCL";
 strLSL = "LSL";
 strUSL = "USL";
 
-// known distionary keys
+// Known distionary keys
 keyMASTER = "Master";
 keyREPORT = "Report";
 
-// dialog for 'Not Implemented Yet'!
+// Dialog for 'Not Implemented Yet'!
 notImplemented = Expr(
 	New Window( "Sorry!",
 		modal,
@@ -115,6 +115,7 @@ checkJMPVersion = Function( {minJmpVer},
    data table
  *******************************************************************************/
 loadMaster = Function( {filename},
+	{dt},
 	dt = Open(
 		filename,
 		invisible,
@@ -160,6 +161,7 @@ loadMaster = Function( {filename},
    data table
  *******************************************************************************/
 loadPart = Function( {filename, partnum},
+	{dt},
 	dt = Open(
 		filename,
 		invisible,
@@ -188,6 +190,9 @@ loadPart = Function( {filename, partnum},
 			Column Separator String( "-" )
 		)
 	);
+	// delete row where 'Data Type' column is 'Hide'
+	dt = deleteHideRow( dt );
+	dt = setPointColor( dt );
 	Return( dt );
 );
 
@@ -205,6 +210,7 @@ loadPart = Function( {filename, partnum},
    (none)
  *******************************************************************************/
 deleteEmptyRow = Function( {dt, colname},
+	{r}, // 'r' is used for loop counter
 	rows = N Rows( dt );
 	For( r = rows, r > 0, r--,
 		pn = Column( colname )[r];
@@ -212,6 +218,54 @@ deleteEmptyRow = Function( {dt, colname},
 			dt << Delete Rows( r )
 		);
 	);
+);
+
+/*******************************************************************************
+ deleteHideRow
+
+ description
+   delete row where 'Data Type' column is 'Hide' 
+
+ arguments
+   dt      : data table
+
+ return
+   (none)
+ *******************************************************************************/
+deleteHideRow = Function( {dt},
+	{r}, // 'r' is used for loop counter
+	rows = N Rows( dt );
+	For( r = rows, r > 0, r--,
+		type = Column( dt, "Data Type" )[r];
+		If( type == "Hide",
+			dt << Delete Rows( r )
+		);
+	);
+	Return( dt );
+);
+
+/*******************************************************************************
+ setPointColor
+ 
+ description
+  Set color of Historic in :Data Type to gray 
+ 
+ arguments
+   dt : data table
+ 
+ return
+   color defined data table
+
+ reference:
+ https://www.jmp.com/china/support/help/13-2/JSG_DataTables_59.shtml
+ *******************************************************************************/
+setPointColor = Function( {dt}, 
+	dt << New Column( "Row State",
+		Row State, 
+		Set Formula( If( :Data Type == "Historic", Color State( 82 ) ) )
+	);
+	Column( "Row State" ) << Copy To Row States();
+	Return( dt );
 );
 
 /*******************************************************************************
@@ -493,7 +547,7 @@ evalCL = Function( {listbox},
 		//
 		// reference:
 		// https://community.jmp.com/t5/Discussions/For-Loop-inside-a-tab-box-where-each-loop-creates-a-different/td-p/83805
-		tbox << Add( report_title, V List Box( hist, chart ) );
+		tbox << Add( report_title, V List Box( chart, hist ) );
 	);
 	tbox << Set Selected( 1 ); // Show first tab
 	
@@ -576,7 +630,8 @@ mainWin = Function( {dispList},
 quitApp = Function( {}, 
 	// Close all tables stored in dictionary
 	//
-	//   reference: https://community.jmp.com/t5/JSL-Cookbook/Looping-through-an-Associative-Array-s-elements/ta-p/236892
+	// reference:
+	// https://community.jmp.com/t5/JSL-Cookbook/Looping-through-an-Associative-Array-s-elements/ta-p/236892
 	For( dt = Here:dict << first, !Is Empty( dt ), dt = Here:dict << next( dt ),
 		Try( Close( dt, "No Save" ) )
 	);
@@ -612,8 +667,9 @@ If( filename == "",
 
 // Disctonary of data table
 //
-//   For Associative Array
-//   Reference: https://www.jmp.com/support/help/14-2/create-associative-arrays.shtml
+// For Associative Array
+// Reference:
+// https://www.jmp.com/support/help/14-2/create-associative-arrays.shtml
 dict = Associative Array();
 
 // Open Master sheet of filename and register disctionary
@@ -623,10 +679,13 @@ dict[keyMASTER] = loadMaster( filename );
 deleteEmptyRow( dict[keyMASTER], strPART );
 
 // Extract list of unique "Part Number" using Associative Array
-//   Note:      Associative Array allows unique keys and this is a kind of
-//              technique to extract unique value from list using Associative Array.
 //
-//   Reference: https://community.jmp.com/t5/JSL-Cookbook/Get-a-list-of-the-unique-values-in-a-column-matrix-or-list/ta-p/51256
+// Note:
+// Associative Array allows unique keys and this is a kind of technique
+// to extract unique value from list using Associative Array.
+//
+// Reference:
+// https://community.jmp.com/t5/JSL-Cookbook/Get-a-list-of-the-unique-values-in-a-column-matrix-or-list/ta-p/51256
 partlist_all = Column( dict[keyMASTER], strPART ) << Get Values;
 partlist = Associative Array( partlist_all ) << Get Keys;
 
