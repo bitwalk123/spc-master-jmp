@@ -343,6 +343,7 @@ countOOC = Function( {chart},
    
   arguments
     dt        : data table
+    partnum   : PART No
     paramname : PARAMETER NAME
     lsl       : LSL
     usl       : USL
@@ -351,7 +352,8 @@ countOOC = Function( {chart},
   return
     instance of the SPC Control Chart
  ******************************************************************************/
-spcChart = Function( {dt, paramname, lsl, usl, type = "Moving Range"},
+spcChart = Function( {dt, partnum, paramname, lsl, usl, type = "Moving Range"},
+	title = "Control Chart for " || partnum || "  " || paramname;
 	Eval(
 		Substitute(
 				Expr(
@@ -365,17 +367,19 @@ spcChart = Function( {dt, paramname, lsl, usl, type = "Moving Range"},
 							Limits( Sigma( __type__ ) ),
 							Warnings( Test 1( 1 ), Test 2( 1 ), Test 5( 1 ) ),
 							Add Spec Limits( {LSL( __lsl__ ), USL( __usl__ )} )
-						)
+						),
+						SendToReport( Dispatch( {}, "Control Chart Builder", OutlineBox, {Set Title( __title__ )} ), )
 					);
 					Return( obj );
 				),
 			Expr( __dt__ ), dt,
+			Expr( __title__ ), title,
 			Expr( __param__ ), paramname,
 			Expr( __lsl__ ), lsl,
 			Expr( __usl__ ), usl,
 			Expr( __type__ ), type
 		)
-	)
+	);
 );
 
 /******************************************************************************
@@ -391,7 +395,8 @@ spcChart = Function( {dt, paramname, lsl, usl, type = "Moving Range"},
   return
     instance of the Distribution report
  ******************************************************************************/
-spcDist = Function( {dt, paramname},
+spcDist = Function( {dt, partnum, paramname},
+	title = "Distribution for " || partnum || "  " || paramname;
 	Eval(
 		Substitute(
 				Expr(
@@ -405,14 +410,16 @@ spcDist = Function( {dt, paramname},
 							Count Axis( 1 ),
 							Normal Quantile Plot( 1 ),
 							Fit Distribution( Normal( Goodness of Fit( 1 ) ) ) // This is JMP 14 style
-						)
+						),
+						SendToReport( Dispatch( {}, "Distributions", OutlineBox, {Set Title( __title__ )} ) )
 					);
 					Return( obj );
 				),
 			Expr( __dt__ ), dt,
+			Expr( __title__ ), title,
 			Expr( __param__ ), paramname
 		)
-	)
+	);
 );
 
 /******************************************************************************
@@ -490,9 +497,9 @@ spcReport = Function( {listbox},
 		listUSL = Insert( listUSL, usl );
 
 		//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_
-		// Histogram
-		hist = Expr(
-			spcDist( Here:dict[partnum], paramname )
+		// Distribution
+		dist = Expr(
+			spcDist( Here:dict[partnum], partnum, paramname )
 		);
 
 		//---------------------------------------------------------------------
@@ -500,9 +507,9 @@ spcReport = Function( {listbox},
 		//
 		// CAUTION: THIS IS HARD CODED!! IT DEPENDS ON REPORT LAYOUT
 		// *** POTENTIAL JMP VERSION INCOMPATIVILITY COULD EXIST! ***
-		reportHist = hist << Report << Minimize Window( 1 );
-		prob = reportHist[Outline Box( 5 )][Number Col Box( 2 )] << Get( 1 );
-		reportHist << Close Window();
+		reportDist = dist << Report << Minimize Window( 1 );
+		prob = reportDist[Outline Box( 5 )][Number Col Box( 2 )] << Get( 1 );
+		reportDist << Close Window();
 
 		// Normality
 		Normality = If( prob > 0.05,
@@ -522,7 +529,7 @@ spcReport = Function( {listbox},
 			"Moving Range"
 		);
 		chart = Expr(
-			spcChart( Here:dict[partnum], paramname, lsl, usl, type )
+			spcChart( Here:dict[partnum], partnum, paramname, lsl, usl, type )
 		);
 
 		//---------------------------------------------------------------------
@@ -548,11 +555,11 @@ spcReport = Function( {listbox},
 		ooc_test = If( ooc > 0, "Fail", "Pass" );
 		listTest125 = Insert( listTest125, ooc_test );
 
-		// Combine Chart & Histogram
+		// Combine Chart & Distribution
 		//
 		// reference:
 		// https://community.jmp.com/t5/Discussions/For-Loop-inside-a-tab-box-where-each-loop-creates-a-different/td-p/83805
-		tbox << Add( report_title, V List Box( chart, hist ) );
+		tbox << Add( report_title, V List Box( chart, dist ) );
 	);
 	tbox << Set Selected( 1 ); // Show first tab
 	
