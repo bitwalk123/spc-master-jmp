@@ -259,11 +259,8 @@ deleteHideRow = Function( {dt},
  reference:
  https://www.jmp.com/china/support/help/13-2/JSG_DataTables_59.shtml
  *******************************************************************************/
-setPointColor = Function( {dt}, 
-	dt << New Column( "Row State",
-		Row State, 
-		Set Formula( If( :Data Type == "Historic", Color State( 82 ) ) )
-	);
+setPointColor = Function( {dt},
+	dt << New Column( "Row State", Row State, Set Formula( If( :Data Type == "Historic", Color State( 82 ) ) ) );
 	Column( "Row State" ) << Copy To Row States();
 	Return( dt );
 );
@@ -387,7 +384,7 @@ spcChart = Function( {dt, paramname, lsl, usl, type = "Moving Range"},
 );
 
 /*******************************************************************************
- spcHist
+ spcDist
  
  description
    Data distribution and Normality check
@@ -399,7 +396,7 @@ spcChart = Function( {dt, paramname, lsl, usl, type = "Moving Range"},
  return
    instance of the Distribution report
  *******************************************************************************/
-spcHist = Function( {dt, paramname},
+spcDist = Function( {dt, paramname},
 	Eval(
 		Substitute(
 				Expr(
@@ -409,12 +406,10 @@ spcHist = Function( {dt, paramname},
 							Quantiles( 0 ),
 							Summary Statistics( 0 ),
 							Horizontal Layout( 1 ),
-							Histogram( 0 ),
 							Vertical( 0 ),
-							Normal Quantile Plot( 1 ), 
-							//Fit Normal( Goodness of Fit( 1 ) )
-							Fit Distribution( Normal( Goodness of Fit( 1 ) ) ) // for JMP 14
-
+							Count Axis( 1 ),
+							Normal Quantile Plot( 1 ),
+							Fit Distribution( Normal( Goodness of Fit( 1 ) ) )
 						)
 					);
 					Return( obj );
@@ -449,7 +444,11 @@ spcReport = Function( {listbox},
 
 	//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 	// Empty Windows for Analysis Report
-	Here:Report = New Window( "Analysis Report", Show Menu( 1 ), Show Toolbars( 1 ), main = V List Box( summary = H List Box(), tbox = Tab Box() ) );
+	Here:Report = New Window( "Analysis Report",
+		Show Menu( 1 ),
+		Show Toolbars( 1 ),
+		main = V List Box( summary = H List Box(), tbox = Tab Box() )
+	);
 
 	// Initial column list for Summary
 	listPartnum = {};
@@ -493,7 +492,7 @@ spcReport = Function( {listbox},
 		//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 		// Histogram
 		hist = Expr(
-			spcHist( Here:dict[partnum], paramname )
+			spcDist( Here:dict[partnum], paramname )
 		);
 
 		//----------------------------------------------------------------------
@@ -596,7 +595,9 @@ mainWin = Function( {dispList},
 		Show Toolbars( 0 ),
 		H List Box(
 			Spacer Box( size( 5, 0 ) ),
-			Panel Box( "Parameter", Here:lbox = List Box( dispList, width( 500 ), nLines( 10 ), max selected( N Items( dispList ) ) ) ),
+			Panel Box( "Parameter",
+				Here:lbox = List Box( dispList, width( 500 ), nLines( 10 ), max selected( N Items( dispList ) ) )
+			),
 			Panel Box( "Action",
 				Lineup Box( N Col( 1 ), 
 					// Evaluate CL button
@@ -646,6 +647,7 @@ quitApp = Function( {},
 /*******************************************************************************
   MAIN (Namespace: Here)
  *******************************************************************************/
+// Check JMP version
 If( checkJMPVersion( minJMPVerRequired ),
 	Throw( "!Required JMP version is at least " || Char( minJMPVerRequired ) )
 );

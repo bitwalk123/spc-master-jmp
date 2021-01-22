@@ -1,0 +1,16 @@
+<jm:menu_and_toolbar_customizations xmlns:jm="http://www.jmp.com/ns/menu" version="3">
+  <jm:insert_in_main_menu>
+    <jm:insert_in_menu>
+      <jm:name>ADD-INS</jm:name>
+      <jm:insert_after>
+        <jm:name></jm:name>
+        <jm:command>
+          <jm:name>SPC Master</jm:name>
+          <jm:caption>SPC Master</jm:caption>
+          <jm:action type="path">$ADDIN_HOME(com.asm.spc_master)\spc_master.jsl</jm:action>
+          <jm:icon type="path">$ADDIN_HOME(com.asm.spc_master)\spc_icon.gif</jm:icon>
+        </jm:command>
+      </jm:insert_after>
+    </jm:insert_in_menu>
+  </jm:insert_in_main_menu>
+</jm:menu_and_toolbar_customizations>
