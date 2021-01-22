@@ -1,9 +1,9 @@
 ﻿/*
-********************************************************************************
+*******************************************************************************
 
  SPC Master for JMP
 
---------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
  MIT License
 
  Copyright (c) 2021 Keiichi Takahashi
@@ -25,22 +25,17 @@
  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  SOFTWARE.
-********************************************************************************
+*******************************************************************************
 */
 
 // Set namespace to 'Here'
 // Name of 'Here' is JMP recommended name for local namespace
 Names Default To Here( 1 );
 
-/*
---------------------------------------------------------------------------------
-*** v0.3 milestone ***
-
-Implement all of required functionality
---------------------------------------------------------------------------------
-*/
 // Application Version
-app_ver = "0.3"; // from 20-Jan-2021
+app_ver = "0.4"; // from 22-Jan-2021
+// *** v0.4 milestone ***
+// ask test this program to team and get feedback from them
 
 // JMP version required to run this script
 minJMPVerRequired = 14;
@@ -50,7 +45,7 @@ strPART = "Part Number";
 strPARAM = "Parameter Name";
 strDIST = "Distribution";
 strCTYPE = "Chart Type";
-strTEST125 = "Test 1, 2, 5";
+strTEST125 = "Test1,2,5";
 strCPK = "Cpk";
 strCP = "Cp";
 strLCL = "LCL";
@@ -75,26 +70,29 @@ notImplemented = Expr(
 	)
 );
 
-/*******************************************************************************
- checkJMPVersion
+/******************************************************************************
+  checkJMPVersion
 
- description
-   Check if current JMP version meets minimum requirement
+  description
+    Check if current JMP version meets minimum requirement
 
- arguments
-   minJmpVer : minimum major version of JMP
+  arguments
+    minJmpVer : minimum major version of JMP
 
- return
-   1 : current JMP version is below requiement
-   0 : current JNP version meets requirement to run this application
- *******************************************************************************/
+  return
+    1 : current JMP version is below requiement
+    0 : current JNP version meets requirement to run this application
+ ******************************************************************************/
 checkJMPVersion = Function( {minJmpVer}, 
 	// obtain current JMP version
 	verStr = JMP Version();
+
 	// extract major version string with Regular Expression
 	matchList = Regex Match( verStr, "^([0-9]+)\.(.+)$" );
+
 	// convert major version string to number
 	curMajorVer = Num( matchList[2] );
+
 	// return 1 if current JMP version is below requiement, otherwise return 0
 	If( curMajorVer < minJMPVer,
 		Return( 1 ),
@@ -102,20 +100,19 @@ checkJMPVersion = Function( {minJmpVer},
 	);
 );
 
-/*******************************************************************************
- loadMaster
+/******************************************************************************
+  loadMaster
 
- description
-   Open Master sheet of filename
+  description
+    Open Master sheet of filename
 
- arguments
-   filename : filename of Excel macro
+  arguments
+    filename : filename of Excel macro
 
- return
-   data table
- *******************************************************************************/
+  return
+    data table
+ ******************************************************************************/
 loadMaster = Function( {filename},
-	{dt},
 	dt = Open(
 		filename,
 		invisible,
@@ -147,21 +144,20 @@ loadMaster = Function( {filename},
 	Return( dt );
 );
 
-/*******************************************************************************
- loadPart
+/******************************************************************************
+  loadPart
 
- description
-   Open specific PART sheet of filename
+  description
+    Open specific PART sheet of filename
 
- arguments
-   filename : filename of Excel macro
-   partnum  : Part Number
+  arguments
+    filename : filename of Excel macro
+    partnum  : Part Number
 
- return
-   data table
- *******************************************************************************/
+  return
+    data table
+ ******************************************************************************/
 loadPart = Function( {filename, partnum},
-	{dt},
 	dt = Open(
 		filename,
 		invisible,
@@ -196,21 +192,21 @@ loadPart = Function( {filename, partnum},
 	Return( dt );
 );
 
-/*******************************************************************************
- deleteEmptyRow
+/******************************************************************************
+  deleteEmptyRow
 
- description
-   delete rows where specified column is empty 
+  description
+    delete rows where specified column is empty 
 
- arguments
-   dt      : data table
-   colname : name of column to check if specified row is empty or not
+  arguments
+    dt      : data table
+    colname : name of column to check if specified row is empty or not
 
- return
-   (none)
- *******************************************************************************/
+  return
+    (none)
+ ******************************************************************************/
 deleteEmptyRow = Function( {dt, colname},
-	{r}, // 'r' is used for loop counter
+	{r},
 	rows = N Rows( dt );
 	For( r = rows, r > 0, r--,
 		pn = Column( colname )[r];
@@ -220,20 +216,20 @@ deleteEmptyRow = Function( {dt, colname},
 	);
 );
 
-/*******************************************************************************
- deleteHideRow
+/******************************************************************************
+  deleteHideRow
 
- description
-   delete row where 'Data Type' column is 'Hide' 
+  description
+    delete row where 'Data Type' column is 'Hide' 
 
- arguments
-   dt      : data table
+  arguments
+    dt : data table
 
- return
-   (none)
- *******************************************************************************/
+  return
+    (none)
+ ******************************************************************************/
 deleteHideRow = Function( {dt},
-	{r}, // 'r' is used for loop counter
+	{r},
 	rows = N Rows( dt );
 	For( r = rows, r > 0, r--,
 		type = Column( dt, "Data Type" )[r];
@@ -244,90 +240,89 @@ deleteHideRow = Function( {dt},
 	Return( dt );
 );
 
-/*******************************************************************************
- setPointColor
+/******************************************************************************
+  setPointColor
  
- description
-  Set color of Historic in :Data Type to gray 
+  description
+    Set color of Historic in :Data Type to gray 
  
- arguments
-   dt : data table
+  arguments
+    dt : data table
  
- return
-   color defined data table
+  return
+    color defined data table
 
- reference:
- https://www.jmp.com/china/support/help/13-2/JSG_DataTables_59.shtml
- *******************************************************************************/
+  reference:
+  https://www.jmp.com/china/support/help/13-2/JSG_DataTables_59.shtml
+ ******************************************************************************/
 setPointColor = Function( {dt},
 	dt << New Column( "Row State", Row State, Set Formula( If( :Data Type == "Historic", Color State( 82 ) ) ) );
 	Column( "Row State" ) << Copy To Row States();
 	Return( dt );
 );
 
-/*******************************************************************************
- concatTwoCols
+/******************************************************************************
+  concatTwoCols
 
- description
-   Concatenate 2 columns in to one list 
+  description
+    Concatenate 2 columns in to one list 
 
- arguments
-   dt       : data table
-   colname1 : name of column 1
-   colname2 : name of column 2
-   sep      : separater, default = 2 spaces
+  arguments
+    dt       : data table
+    colname1 : name of column 1
+    colname2 : name of column 2
+    sep      : separater, default = 2 spaces
 
- return
-   list of element of colname1 || sep || element of colname2
- *******************************************************************************/
+  return
+    list of element of colname1 || sep || element of colname2
+ ******************************************************************************/
 concatTwoCols = Function( {dt, colname1, colname2, sep = "  "},
-	{r}, // 'r' is used for loop counter
+	{r},
 	rows = N Rows( dt );
 	elementList = {};
 	For( r = 1, r <= rows, r++,
 		item1 = Column( dt, colname1 )[r];
 		item2 = Column( dt, colname2 )[r];
-		//element = name1 || sep || name2;
 		element = Concat Items( {item1, item2}, sep );
 		Insert Into( elementList, element );
 	);
 	Return( elementList );
 );
 
-/*******************************************************************************
- getCellValue
+/******************************************************************************
+  getCellValue
 
- description
-   Get cell value in specified data table 
+  description
+    Get cell value in specified data table 
 
- arguments
-   dt       : data table
-   colname  : NAME of column
-   row      : row NUMBER
+  arguments
+    dt       : data table
+    colname  : NAME of column
+    row      : row NUMBER
 
- return
-   velue at specified column name and row
- *******************************************************************************/
+  return
+    velue at specified column name and row
+ ******************************************************************************/
 getCellValue = Function( {dt, colname, row},
 	value = Column( dt, colname )[row];
 	Return( value );
 );
 
-/*******************************************************************************
- countOOC
+/******************************************************************************
+  countOOC
 
- description
-   Count number of OOC. This is for JMP 14.
-   Note: JMP 15 has easier way to get OOC count.
+  description
+    Count number of OOC. This is for JMP 14.
+    Note: JMP 15 can use Alarm Report().
 
- arguments
-   chart : instance of Control Chart Builder
+  arguments
+    chart : instance of Control Chart Builder
 
- return
-   OOC count 
- *******************************************************************************/
+  return
+    OOC count 
+ ******************************************************************************/
 countOOC = Function( {chart},
-	{i}, // 'i' is usually used for loop counter
+	{i},
 	dt = chart << Save Summaries();
 	listFail = Column( dt, "Test Failures" ) << Get Values();
 	count = 0;
@@ -340,22 +335,22 @@ countOOC = Function( {chart},
 	Return( count );
 );
 
-/*******************************************************************************
- spcChart
+/******************************************************************************
+  spcChart
  
- description
-   Plot basic SPC Control Chart
+  description
+    Plot basic SPC Control Chart
    
- arguments
-   dt        : data table
-   paramname : PARAMETER NAME
-   lsl       : LSL
-   usl       : USL
-   type      : "Moving Range" (default), "Levey Jennings"
+  arguments
+    dt        : data table
+    paramname : PARAMETER NAME
+    lsl       : LSL
+    usl       : USL
+    type      : "Moving Range" (default), "Levey Jennings"
  
- return
-   instance of the SPC Control Chart
- *******************************************************************************/
+  return
+    instance of the SPC Control Chart
+ ******************************************************************************/
 spcChart = Function( {dt, paramname, lsl, usl, type = "Moving Range"},
 	Eval(
 		Substitute(
@@ -363,7 +358,7 @@ spcChart = Function( {dt, paramname, lsl, usl, type = "Moving Range"},
 					obj = __dt__ << Control Chart Builder(
 						Show Two Shewhart Charts( 0 ),
 						Show Control Panel( 0 ), 
-						//Show Alarm Report( 1 ),
+						//Show Alarm Report( 1 ), // Valid for JMP 15
 						Variables( Y( Column( __param__ ) ) ),
 						Chart(
 							Points( Statistic( "Individual" ) ),
@@ -383,19 +378,19 @@ spcChart = Function( {dt, paramname, lsl, usl, type = "Moving Range"},
 	)
 );
 
-/*******************************************************************************
- spcDist
+/******************************************************************************
+  spcDist
  
- description
-   Data distribution and Normality check
+  description
+    Data distribution and Normality check
    
- arguments
-   dt        : data table
-   paramname : PARAMETER NAME
+  arguments
+    dt        : data table
+    paramname : PARAMETER NAME
  
- return
-   instance of the Distribution report
- *******************************************************************************/
+  return
+    instance of the Distribution report
+ ******************************************************************************/
 spcDist = Function( {dt, paramname},
 	Eval(
 		Substitute(
@@ -409,7 +404,7 @@ spcDist = Function( {dt, paramname},
 							Vertical( 0 ),
 							Count Axis( 1 ),
 							Normal Quantile Plot( 1 ),
-							Fit Distribution( Normal( Goodness of Fit( 1 ) ) )
+							Fit Distribution( Normal( Goodness of Fit( 1 ) ) ) // This is JMP 14 style
 						)
 					);
 					Return( obj );
@@ -420,29 +415,34 @@ spcDist = Function( {dt, paramname},
 	)
 );
 
-/*******************************************************************************
- spcReport
+/******************************************************************************
+  spcReport
 
- description
-   evaluate control limit
+  description
+    evaluate control limit
 
- arguments
-   listbox : List Box shown PART NUMBER & PARAMETER NAME
+  arguments
+    listbox : List Box shown PART NUMBER & PARAMETER NAME
 
- return
-   (none) 
- *******************************************************************************/
+  return
+    (none) 
+ ******************************************************************************/
 spcReport = Function( {listbox},
-	{i}, // 'i' is usually used for loop counter
+	{i}, 
+	// 'i' is used for loop counter, define valid scope is in this function only
+	// for avoiding from variable name conflict with outside functions.
+	// JMP namespace is very confusing!!
+
+	// list used in the loop
 	listIndex = listbox << Get Selected Indices;
 	listItem = listbox << Get Selected;
 
 	// check number of selection on the listbox
 	If( N Items( listItem ) == 0,
 		Return()
-	); // return if no selection on the List Box
+	); // return if no selection on the List Box of the mainWin
 
-	//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+	//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_
 	// Empty Windows for Analysis Report
 	Here:Report = New Window( "Analysis Report",
 		Show Menu( 1 ),
@@ -489,13 +489,13 @@ spcReport = Function( {listbox},
 		listLSL = Insert( listLSL, lsl );
 		listUSL = Insert( listUSL, usl );
 
-		//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+		//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_
 		// Histogram
 		hist = Expr(
 			spcDist( Here:dict[partnum], paramname )
 		);
 
-		//----------------------------------------------------------------------
+		//---------------------------------------------------------------------
 		// obtain result of Shapiro-Wilk test to determin Chart Type
 		//
 		// CAUTION: THIS IS HARD CODED!! IT DEPENDS ON REPORT LAYOUT
@@ -503,16 +503,19 @@ spcReport = Function( {listbox},
 		reportHist = hist << Report << Minimize Window( 1 );
 		prob = reportHist[Outline Box( 5 )][Number Col Box( 2 )] << Get( 1 );
 		reportHist << Close Window();
-		// add indices for summary table
+
+		// Normality
 		Normality = If( prob > 0.05,
 			"Normal",
 			"Non-Normal"
 		);
 		listDist = Insert( listDist, Normality );
+
+		// Chart Type
 		chartType = If( prob > 0.05, "LJ", "IR" );
 		listChartType = Insert( listChartType, chartType );
 
-		//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+		//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_
 		// Control Chart
 		type = If( prob > 0.05,
 			"Levey Jennings",
@@ -522,8 +525,8 @@ spcReport = Function( {listbox},
 			spcChart( Here:dict[partnum], paramname, lsl, usl, type )
 		);
 
-		//----------------------------------------------------------------------
-		// obtain control limits, warnings and indices of process capability
+		//---------------------------------------------------------------------
+		// Obtain control limits, warnings and indices of process capability
 		//
 		// CAUTION: THIS IS HARD CODED!! IT DEPENDS ON REPORT LAYOUT
 		// *** POTENTIAL JMP VERSION INCOMPATIVILITY COULD EXIST! ***
@@ -533,14 +536,17 @@ spcReport = Function( {listbox},
 		cpk = reportChart[Outline Box( 7 )][Number Col Box( 1 )] << Get( 1 );
 		cp = reportChart[Outline Box( 7 )][Number Col Box( 1 )] << Get( 4 );
 		reportChart << Close Window();
-		// add indices for summary table
+
+		// Add indices for summary table
 		listLCL = Insert( listLCL, lcl );
 		listUCL = Insert( listUCL, ucl );
+		listCpk = Insert( listCpk, cpk );
+		listCp = Insert( listCp, cp );
+
+		// Count OOC
 		ooc = countOOC( chart );
 		ooc_test = If( ooc > 0, "Fail", "Pass" );
 		listTest125 = Insert( listTest125, ooc_test );
-		listCpk = Insert( listCpk, cpk );
-		listCp = Insert( listCp, cp );
 
 		// Combine Chart & Histogram
 		//
@@ -551,7 +557,7 @@ spcReport = Function( {listbox},
 	tbox << Set Selected( 1 ); // Show first tab
 	
 
-	//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+	//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_
 	// Summary Table
 	//
 	// JMP Function() can refer variable outside in the same 'Here' namescope. This is confusing!
@@ -569,26 +575,25 @@ spcReport = Function( {listbox},
 			Number Col Edit Box( Here:strLCL, listLCL ),
 			Number Col Edit Box( Here:strUCL, listUCL ),
 			Number Col Edit Box( Here:strLSL, listLSL ),
-			Number Col Edit Box( Here:strUSL, listUSL ), 
-
+			Number Col Edit Box( Here:strUSL, listUSL )
 		)
 	);
 	tblSummary << Show Window( 0 );
-	summary << Append( Outline Box( "Summary", tblSummary ) );
+	summary << Append( Outline Box( "SPC Summary", tblSummary ) );
 );
 
-/*******************************************************************************
- mainWin
+/******************************************************************************
+  mainWin
 
- description
-   Generate Main GUI Window
+  description
+    Generate Main GUI Window
 
- arguments
-   dispList  : list of pair of PART NUMBER & PARAMETER
+  arguments
+    dispList  : list of pair of PART NUMBER & PARAMETER
 
- return
-   instance of this window 
- *******************************************************************************/
+  return
+    instance of this window 
+ ******************************************************************************/
 mainWin = Function( {dispList},
 	win = New Window( Concat Items( {"SPC Master", Here:app_ver}, " " ),
 		Show Menu( 0 ),
@@ -604,6 +609,7 @@ mainWin = Function( {dispList},
 					but_plot = Button Box( "Report", spcReport( Here:lbox ) ), // 'Here:' is needed to pass this to other function from button click.
 					but_plot << Set Icon( "FunctionalDataExplorer" ),
 					but_plot << Set Icon Location( "left" ), 
+
 					// Quit button
 					but_quit = Button Box( "Quit", quitApp() ),
 					but_quit << Set Icon( "Close" ),
@@ -616,20 +622,20 @@ mainWin = Function( {dispList},
 	Return( win );
 );
 
-/*******************************************************************************
- quitApp
+/******************************************************************************
+  quitApp
 
- description
-   Close application
+  description
+    Close application
 
- arguments
-   win  : Application window
+  arguments
+    (none)
 
- return
-   (none) 
- *******************************************************************************/
+  return
+    (none) 
+ ******************************************************************************/
 quitApp = Function( {}, 
-	// Close all tables stored in dictionary
+	// Close all tables stored in the dictionary
 	//
 	// reference:
 	// https://community.jmp.com/t5/JSL-Cookbook/Looping-through-an-Associative-Array-s-elements/ta-p/236892
@@ -644,19 +650,20 @@ quitApp = Function( {},
 	Here:winMain << Close Window();
 );
 
-/*******************************************************************************
+/******************************************************************************
   MAIN (Namespace: Here)
- *******************************************************************************/
+ ******************************************************************************/
 // Check JMP version
 If( checkJMPVersion( minJMPVerRequired ),
 	Throw( "!Required JMP version is at least " || Char( minJMPVerRequired ) )
 );
 
-// select file to read
+//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_
+// Select SPC macro file to read
 filename = Pick File(
 	"Select SPC macro file", // prompt message
 	"", // initial directory
-	{"SPC Macro file|xlsm", "All files|*"}, // file filter list by extention
+	{"SPC macro file|xlsm", "All files|*"}, // file filter list by extention
 	1, // intially selected item
 	0, // doesn’t prompt the user to save the file
 	"" // file that is selected by default
@@ -667,6 +674,7 @@ If( filename == "",
 	Throw( "!Empty Filename." )
 );
 
+//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_
 // Disctonary of data table
 //
 // For Associative Array
@@ -680,6 +688,7 @@ dict[keyMASTER] = loadMaster( filename );
 // Delete rows where column 1, "Part Number" is empty 
 deleteEmptyRow( dict[keyMASTER], strPART );
 
+//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_
 // Extract list of unique "Part Number" using Associative Array
 //
 // Note:
@@ -700,6 +709,7 @@ For( i = 1, i <= N Items( partlist ), i++,
 // Concatenate 2 columns in to one list
 elementList = concatTwoCols( dict[keyMASTER], strPART, strPARAM );
 
+//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_
 //  Main GUI Window
 winMain = mainWin( elementList );
 
