@@ -33,9 +33,9 @@
 Names Default To Here( 1 );
 
 // Application Version
-app_ver = "0.4"; // from 22-Jan-2021
-// *** v0.4 milestone ***
-// ask test this program to team and get feedback from them
+app_ver = "0.5"; // from 22-Jan-2021
+// *** v0.5 milestone ***
+// add Cpk calculation for non-normal
 
 // JMP version required to run this script
 minJMPVerRequired = 14;
