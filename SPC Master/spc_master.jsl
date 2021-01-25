@@ -395,7 +395,7 @@ spcChart = Function( {dt, partnum, paramname, lsl, usl, type = "Moving Range"},
   return
     instance of the Distribution report
  ******************************************************************************/
-spcDist = Function( {dt, partnum, paramname},
+spcDist = Function( {dt, partnum, paramname, lsl, usl},
 	title = "Distribution for " || partnum || "  " || paramname;
 	Eval(
 		Substitute(
@@ -409,7 +409,7 @@ spcDist = Function( {dt, partnum, paramname},
 							Vertical( 0 ),
 							Count Axis( 1 ),
 							Normal Quantile Plot( 1 ),
-							Fit Distribution( Normal( Goodness of Fit( 1 ) ) ) // This is JMP 14 style
+							Fit Distribution( Normal( Spec Limits( LSL( __lsl__ ), USL( __usl__ ) ), Goodness of Fit( 1 ) ) ) // This is JMP 14 style
 						),
 						SendToReport( Dispatch( {}, "Distributions", OutlineBox, {Set Title( __title__ )} ) )
 					);
@@ -417,7 +417,9 @@ spcDist = Function( {dt, partnum, paramname},
 				),
 			Expr( __dt__ ), dt,
 			Expr( __title__ ), title,
-			Expr( __param__ ), paramname
+			Expr( __param__ ), paramname,
+			Expr( __lsl__ ), lsl,
+			Expr( __usl__ ), usl
 		)
 	);
 );
@@ -499,19 +501,20 @@ spcReport = Function( {listbox},
 		//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_
 		// Distribution
 		dist = Expr(
-			spcDist( Here:dict[partnum], partnum, paramname )
+			spcDist( Here:dict[partnum], partnum, paramname, lsl, usl )
 		);
 
 		//---------------------------------------------------------------------
-		// obtain result of Shapiro-Wilk test to determin Chart Type
+		// Obtain result of Shapiro-Wilk test to determin Chart Type
 		//
 		// CAUTION: THIS IS HARD CODED!! IT DEPENDS ON REPORT LAYOUT
 		// *** POTENTIAL JMP VERSION INCOMPATIVILITY COULD EXIST! ***
 		reportDist = dist << Report << Minimize Window( 1 );
-		prob = reportDist[Outline Box( 5 )][Number Col Box( 2 )] << Get( 1 );
+		prob = reportDist[Outline Box( 7 )][Number Col Box( 2 )] << Get( 1 );
 		reportDist << Close Window();
 
 		// Normality
+		Print( prob );
 		Normality = If( prob > 0.05,
 			"Normal",
 			"Non-Normal"
@@ -607,9 +610,7 @@ mainWin = Function( {dispList},
 		Show Toolbars( 0 ),
 		H List Box(
 			Spacer Box( size( 5, 0 ) ),
-			Panel Box( "Parameter",
-				Here:lbox = List Box( dispList, width( 500 ), nLines( 10 ), max selected( N Items( dispList ) ) )
-			),
+			Panel Box( "Parameter", Here:lbox = List Box( dispList, width( 500 ), nLines( 10 ), max selected( N Items( dispList ) ) ) ),
 			Panel Box( "Action",
 				Lineup Box( N Col( 1 ), 
 					// Evaluate CL button
