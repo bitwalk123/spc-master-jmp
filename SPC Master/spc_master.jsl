@@ -360,6 +360,7 @@ spcChart = Function( {dt, partnum, paramname, lsl, usl, type = "Moving Range"},
 					obj = __dt__ << Control Chart Builder(
 						Show Two Shewhart Charts( 0 ),
 						Show Control Panel( 0 ), 
+						Show Capability( 0 ),
 						//Show Alarm Report( 1 ), // Valid for JMP 15
 						Variables( Y( Column( __param__ ) ) ),
 						Chart(
@@ -453,11 +454,7 @@ spcReport = Function( {listbox},
 
 	//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_
 	// Empty Windows for Analysis Report
-	Here:Report = New Window( "Analysis Report",
-		Show Menu( 1 ),
-		Show Toolbars( 1 ),
-		main = V List Box( summary = H List Box(), tbox = Tab Box() )
-	);
+	Here:Report = New Window( "Analysis Report", Show Menu( 1 ), Show Toolbars( 1 ), main = V List Box( summary = H List Box(), tbox = Tab Box() ) );
 
 	// Initial column list for Summary
 	listPartnum = {};
@@ -511,10 +508,11 @@ spcReport = Function( {listbox},
 		// *** POTENTIAL JMP VERSION INCOMPATIVILITY COULD EXIST! ***
 		reportDist = dist << Report << Minimize Window( 1 );
 		prob = reportDist[Outline Box( 7 )][Number Col Box( 2 )] << Get( 1 );
+		cp = reportDist[Outline Box( 6 )][Number Col Box( 1 )] << Get( 1 );
+		cpk = reportDist[Outline Box( 6 )][Number Col Box( 1 )] << Get( 2 );
 		reportDist << Close Window();
 
 		// Normality
-		Print( prob );
 		Normality = If( prob > 0.05,
 			"Normal",
 			"Non-Normal"
@@ -543,8 +541,8 @@ spcReport = Function( {listbox},
 		reportChart = chart << Report << Minimize Window( 1 );
 		lcl = reportChart[Outline Box( 2 )][Number Col Box( 1 )] << Get( 1 );
 		ucl = reportChart[Outline Box( 2 )][Number Col Box( 3 )] << Get( 1 );
-		cpk = reportChart[Outline Box( 7 )][Number Col Box( 1 )] << Get( 1 );
-		cp = reportChart[Outline Box( 7 )][Number Col Box( 1 )] << Get( 4 );
+		//cpk = reportChart[Outline Box( 7 )][Number Col Box( 1 )] << Get( 1 );
+		//cp = reportChart[Outline Box( 7 )][Number Col Box( 1 )] << Get( 4 );
 		reportChart << Close Window();
 
 		// Add indices for summary table
