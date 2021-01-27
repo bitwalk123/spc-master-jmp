@@ -359,8 +359,8 @@ spcChart = Function( {dt, partnum, paramname, lsl, usl, type = "Moving Range"},
 				Expr(
 					obj = __dt__ << Control Chart Builder(
 						Show Two Shewhart Charts( 0 ),
-						Show Control Panel( 0 ), 
-						Show Capability( 0 ),
+						Show Control Panel( 0 ),
+						Show Capability( 0 ), 
 						//Show Alarm Report( 1 ), // Valid for JMP 15
 						Variables( Y( Column( __param__ ) ) ),
 						Chart(
@@ -391,13 +391,14 @@ spcChart = Function( {dt, partnum, paramname, lsl, usl, type = "Moving Range"},
    
   arguments
     dt        : data table
+    partnum   : PART NUMBER
     paramname : PARAMETER NAME
  
   return
-    instance of the Distribution report
+    instance of the Distribution
  ******************************************************************************/
-spcDist = Function( {dt, partnum, paramname, lsl, usl},
-	title = "Distribution for " || partnum || "  " || paramname;
+spcDist = Function( {dt, partnum, paramname},
+	title = "Normality for " || partnum || "  " || paramname;
 	Eval(
 		Substitute(
 				Expr(
@@ -410,9 +411,49 @@ spcDist = Function( {dt, partnum, paramname, lsl, usl},
 							Vertical( 0 ),
 							Count Axis( 1 ),
 							Normal Quantile Plot( 1 ),
-							Fit Distribution( Normal( Spec Limits( LSL( __lsl__ ), USL( __usl__ ) ), Goodness of Fit( 1 ) ) ) // This is JMP 14 style
+							Fit Distribution( Normal( Goodness of Fit( 1 ) ) ) // This is JMP 14 style
 						),
 						SendToReport( Dispatch( {}, "Distributions", OutlineBox, {Set Title( __title__ )} ) )
+					);
+					Return( obj );
+				),
+			Expr( __dt__ ), dt,
+			Expr( __title__ ), title,
+			Expr( __param__ ), paramname
+		)
+	);
+);
+
+/******************************************************************************
+  spcCapabilityNonNormal
+ 
+  description
+    Process Capability study for Non-Normal distribution
+   
+  arguments
+    dt        : data table
+    partnum   : PART No
+    paramname : PARAMETER NAME
+    lsl       : LSL
+    usl       : USL
+ 
+  return
+    instance of the Process Capability
+ ******************************************************************************/
+spcCapabilityNonNormal = Function( {dt, partnum, paramname, lsl, usl},
+	title = "Process Capability for " || partnum || "  " || paramname;
+	Eval(
+		Substitute(
+				Expr(
+					obj = dt << Process Capability(
+						Process Variables( __param__ & Dist( Best Fit ) ),
+						Spec Limits( __param__( LSL( __lsl__ ), USL( __usl__ ) ) ),
+						Individual Detail Reports( 1 ),
+						Capability Box Plots( 1 ),
+						Goal Plot( 0 ),
+						Capability Index Plot( 0 ),
+						Process Performance Plot( 0 ),
+						SendToReport( Dispatch( {}, "Process Capability", OutlineBox, {Set Title( __title__ )} ) )
 					);
 					Return( obj );
 				),
@@ -498,7 +539,7 @@ spcReport = Function( {listbox},
 		//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_
 		// Distribution
 		dist = Expr(
-			spcDist( Here:dict[partnum], partnum, paramname, lsl, usl )
+			spcDist( Here:dict[partnum], partnum, paramname )
 		);
 
 		//---------------------------------------------------------------------
@@ -507,9 +548,8 @@ spcReport = Function( {listbox},
 		// CAUTION: THIS IS HARD CODED!! IT DEPENDS ON REPORT LAYOUT
 		// *** POTENTIAL JMP VERSION INCOMPATIVILITY COULD EXIST! ***
 		reportDist = dist << Report << Minimize Window( 1 );
-		prob = reportDist[Outline Box( 7 )][Number Col Box( 2 )] << Get( 1 );
-		cp = reportDist[Outline Box( 6 )][Number Col Box( 1 )] << Get( 1 );
-		cpk = reportDist[Outline Box( 6 )][Number Col Box( 1 )] << Get( 2 );
+		prob = reportDist[Outline Box( 5 )][Number Col Box( 2 )] << Get( 1 );
+		//Print(prob);
 		reportDist << Close Window();
 
 		// Normality
@@ -518,6 +558,24 @@ spcReport = Function( {listbox},
 			"Non-Normal"
 		);
 		listDist = Insert( listDist, Normality );
+
+		//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_
+		// Process Capability for Non-Normal distribution
+		capability = Expr(
+			spcCapabilityNonNormal( Here:dict[partnum], partnum, paramname, lsl, usl )
+		);
+
+		//---------------------------------------------------------------------
+		// Obtain Cpk and Cp
+		//
+		// CAUTION: THIS IS HARD CODED!! IT DEPENDS ON REPORT LAYOUT
+		// *** POTENTIAL JMP VERSION INCOMPATIVILITY COULD EXIST! ***
+		reportCapability = capability << Report << Minimize Window( 1 );
+		cpk = reportCapability[Outline Box( 9 )][Number Col Box( 1 )] << Get( 1 );
+		//Print( cpk );
+		cp = reportCapability[Outline Box( 9 )][Number Col Box( 1 )] << Get( 4 );
+		//Print( cp );
+		reportCapability << Close Window();
 
 		// Chart Type
 		chartType = If( prob > 0.05, "LJ", "IR" );
@@ -541,8 +599,6 @@ spcReport = Function( {listbox},
 		reportChart = chart << Report << Minimize Window( 1 );
 		lcl = reportChart[Outline Box( 2 )][Number Col Box( 1 )] << Get( 1 );
 		ucl = reportChart[Outline Box( 2 )][Number Col Box( 3 )] << Get( 1 );
-		//cpk = reportChart[Outline Box( 7 )][Number Col Box( 1 )] << Get( 1 );
-		//cp = reportChart[Outline Box( 7 )][Number Col Box( 1 )] << Get( 4 );
 		reportChart << Close Window();
 
 		// Add indices for summary table
@@ -560,7 +616,7 @@ spcReport = Function( {listbox},
 		//
 		// reference:
 		// https://community.jmp.com/t5/Discussions/For-Loop-inside-a-tab-box-where-each-loop-creates-a-different/td-p/83805
-		tbox << Add( report_title, V List Box( chart, dist ) );
+		tbox << Add( report_title, V List Box( chart, dist, capability ) );
 	);
 	tbox << Set Selected( 1 ); // Show first tab
 	
