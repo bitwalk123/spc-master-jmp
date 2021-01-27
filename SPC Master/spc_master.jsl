@@ -408,8 +408,8 @@ spcDist = Function( {dt, partnum, paramname},
 							Quantiles( 0 ),
 							Summary Statistics( 0 ),
 							Horizontal Layout( 1 ),
+							Histogram( 0 ),
 							Vertical( 0 ),
-							Count Axis( 1 ),
 							Normal Quantile Plot( 1 ),
 							Fit Distribution( Normal( Goodness of Fit( 1 ) ) ) // This is JMP 14 style
 						),
@@ -420,6 +420,49 @@ spcDist = Function( {dt, partnum, paramname},
 			Expr( __dt__ ), dt,
 			Expr( __title__ ), title,
 			Expr( __param__ ), paramname
+		)
+	);
+);
+
+/******************************************************************************
+  spcCapability
+ 
+  description
+    Process Capability study for Normal distribution
+   
+  arguments
+    dt        : data table
+    partnum   : PART No
+    paramname : PARAMETER NAME
+    lsl       : LSL
+    usl       : USL
+ 
+  return
+    instance of the Process Capability
+ ******************************************************************************/
+spcCapability = Function( {dt, partnum, paramname, lsl, usl},
+	title = "Process Capability for " || partnum || "  " || paramname;
+	Eval(
+		Substitute(
+				Expr(
+					obj = __dt__ << Process Capability(
+						Process Variables( __param__ ),
+						Spec Limits( __param__( LSL( __lsl__ ), USL( __usl__ ) ) ),
+						Individual Detail Reports( 1 ),
+						Capability Box Plots( 0 ),
+						Goal Plot( 0 ),
+						Capability Index Plot( 0 ),
+						Process Performance Plot( 0 ),
+						{__param__ << Process Capability Analysis( Within Sigma Capability( 0 ), Histogram( 1, Show Within Sigma Density( 0 ) ) )},
+						SendToReport( Dispatch( {}, "Process Capability", OutlineBox, {Set Title( __title__ )} ) )
+					);
+					Return( obj );
+				),
+			Expr( __dt__ ), dt,
+			Expr( __title__ ), title,
+			Expr( __param__ ), paramname,
+			Expr( __lsl__ ), lsl,
+			Expr( __usl__ ), usl
 		)
 	);
 );
@@ -445,7 +488,7 @@ spcCapabilityNonNormal = Function( {dt, partnum, paramname, lsl, usl},
 	Eval(
 		Substitute(
 				Expr(
-					obj = dt << Process Capability(
+					obj = __dt__ << Process Capability(
 						Process Variables( __param__ & Dist( Best Fit ) ),
 						Spec Limits( __param__( LSL( __lsl__ ), USL( __usl__ ) ) ),
 						Individual Detail Reports( 1 ),
@@ -561,21 +604,42 @@ spcReport = Function( {listbox},
 
 		//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_
 		// Process Capability for Non-Normal distribution
-		capability = Expr(
-			spcCapabilityNonNormal( Here:dict[partnum], partnum, paramname, lsl, usl )
-		);
+		//capability = Expr(
+		//	spcCapabilityNonNormal( Here:dict[partnum], partnum, paramname, lsl, usl )
+		//);
 
 		//---------------------------------------------------------------------
 		// Obtain Cpk and Cp
 		//
 		// CAUTION: THIS IS HARD CODED!! IT DEPENDS ON REPORT LAYOUT
 		// *** POTENTIAL JMP VERSION INCOMPATIVILITY COULD EXIST! ***
-		reportCapability = capability << Report << Minimize Window( 1 );
-		cpk = reportCapability[Outline Box( 9 )][Number Col Box( 1 )] << Get( 1 );
-		//Print( cpk );
-		cp = reportCapability[Outline Box( 9 )][Number Col Box( 1 )] << Get( 4 );
-		//Print( cp );
-		reportCapability << Close Window();
+		If( prob > 0.05, 
+			// Normal
+			//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_
+			// Process Capability for Normal distribution
+			capability = Expr(
+				spcCapability( Here:dict[partnum], partnum, paramname, lsl, usl )
+			);
+			reportCapability = capability << Report << Minimize Window( 1 );
+			cpk = reportCapability[Outline Box( 6 )][Number Col Box( 1 )] << Get( 1 );
+			Print( cpk );
+			cp = reportCapability[Outline Box( 6 )][Number Col Box( 1 )] << Get( 4 );
+			Print( cp );
+			reportCapability << Close Window();
+		, 
+			// Non-Normal
+			//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_
+			// Process Capability for Non-Normal distribution
+			capability = Expr(
+				spcCapabilityNonNormal( Here:dict[partnum], partnum, paramname, lsl, usl )
+			);
+			reportCapability = capability << Report << Minimize Window( 1 );
+			cpk = reportCapability[Outline Box( 9 )][Number Col Box( 1 )] << Get( 1 );
+			//Print( cpk );
+			cp = reportCapability[Outline Box( 9 )][Number Col Box( 1 )] << Get( 4 );
+			//Print( cp );
+			reportCapability << Close Window();
+		);
 
 		// Chart Type
 		chartType = If( prob > 0.05, "LJ", "IR" );
