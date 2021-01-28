@@ -538,7 +538,14 @@ spcReport = Function( {listbox},
 
 	//_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_
 	// Empty Windows for Analysis Report
-	Here:Report = New Window( "Analysis Report", Show Menu( 1 ), Show Toolbars( 1 ), main = V List Box( summary = H List Box(), tbox = Tab Box() ) );
+	//
+	// Reference for Tab Box
+	// https://community.jmp.com/t5/Discussions/Create-Tabs-without-scrolling-horizontally/td-p/40428
+	Here:Report = New Window( "Analysis Report",
+		Show Menu( 1 ),
+		Show Toolbars( 1 ),
+		main = V List Box( summary = H List Box(), tbox = Tab Box( <<Set Overflow Enabled( 1 ) ) )
+	);
 
 	// Initial column list for Summary
 	listPartnum = {};
@@ -624,7 +631,7 @@ spcReport = Function( {listbox},
 			cpk = reportCapability[Outline Box( 6 )][Number Col Box( 1 )] << Get( 1 );
 			//Print( cpk );
 			cp = .;
-			Try(cp = reportCapability[Outline Box( 6 )][Number Col Box( 1 )] << Get( 4 ));
+			Try( cp = reportCapability[Outline Box( 6 )][Number Col Box( 1 )] << Get( 4 ) );
 			//Print( cp );
 			reportCapability << Close Window();
 		, 
@@ -638,7 +645,7 @@ spcReport = Function( {listbox},
 			cpk = reportCapability[Outline Box( 9 )][Number Col Box( 1 )] << Get( 1 );
 			//Print( cpk );
 			cp = .;
-			Try(cp = reportCapability[Outline Box( 9 )][Number Col Box( 1 )] << Get( 4 ));
+			Try( cp = reportCapability[Outline Box( 9 )][Number Col Box( 1 )] << Get( 4 ) );
 			//Print( cp );
 			reportCapability << Close Window();
 		);
