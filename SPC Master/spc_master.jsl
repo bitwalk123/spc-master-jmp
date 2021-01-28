@@ -441,7 +441,7 @@ spcDist = Function( {dt, partnum, paramname},
     instance of the Process Capability
  ******************************************************************************/
 spcCapability = Function( {dt, partnum, paramname, lsl, usl},
-	title = "Process Capability for " || partnum || "  " || paramname;
+	title = "Process Capability study for " || partnum || "  " || paramname;
 	Eval(
 		Substitute(
 				Expr(
@@ -484,7 +484,7 @@ spcCapability = Function( {dt, partnum, paramname, lsl, usl},
     instance of the Process Capability
  ******************************************************************************/
 spcCapabilityNonNormal = Function( {dt, partnum, paramname, lsl, usl},
-	title = "Process Capability for " || partnum || "  " || paramname;
+	title = "Process Capability study for " || partnum || "  " || paramname || " (Non-Normal)";
 	Eval(
 		Substitute(
 				Expr(
@@ -622,9 +622,10 @@ spcReport = Function( {listbox},
 			);
 			reportCapability = capability << Report << Minimize Window( 1 );
 			cpk = reportCapability[Outline Box( 6 )][Number Col Box( 1 )] << Get( 1 );
-			Print( cpk );
-			cp = reportCapability[Outline Box( 6 )][Number Col Box( 1 )] << Get( 4 );
-			Print( cp );
+			//Print( cpk );
+			cp = .;
+			Try(cp = reportCapability[Outline Box( 6 )][Number Col Box( 1 )] << Get( 4 ));
+			//Print( cp );
 			reportCapability << Close Window();
 		, 
 			// Non-Normal
@@ -636,7 +637,8 @@ spcReport = Function( {listbox},
 			reportCapability = capability << Report << Minimize Window( 1 );
 			cpk = reportCapability[Outline Box( 9 )][Number Col Box( 1 )] << Get( 1 );
 			//Print( cpk );
-			cp = reportCapability[Outline Box( 9 )][Number Col Box( 1 )] << Get( 4 );
+			cp = .;
+			Try(cp = reportCapability[Outline Box( 9 )][Number Col Box( 1 )] << Get( 4 ));
 			//Print( cp );
 			reportCapability << Close Window();
 		);
