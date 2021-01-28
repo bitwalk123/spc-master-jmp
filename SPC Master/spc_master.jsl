@@ -62,10 +62,10 @@ notImplemented = Expr(
 	New Window( "Sorry!",
 		modal,
 		V List Box(
-			Spacer Box( size( 5, 10 ) ),
+			Spacer Box( Size( 5, 10 ) ),
 			Text Box( "Not Implemented Yet!" ),
 			Text Box( " " ),
-			H List Box( Spacer Box( size( 120, 0 ) ), but_ok = Button Box( "OK" ), but_ok << set icon( "RangeCheck" ) )
+			H List Box( Spacer Box( size( 120, 0 ) ), but_ok = Button Box( "OK" ), but_ok << Set Icon( "RangeCheck" ) )
 		)
 	)
 );
