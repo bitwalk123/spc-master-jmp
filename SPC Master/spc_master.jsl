@@ -33,12 +33,15 @@
 Names Default To Here( 1 );
 
 // Application Version
-app_ver = "0.5"; // from 22-Jan-2021
+app_ver = "0.5.1"; // from 07-Apr-2021
 // *** v0.5 milestone ***
 // add Cpk calculation for non-normal
+//
+// *** v0.5.1 ***
+// bug fix for Non-Normal Process Capability
 
 // JMP version required to run this script
-minJMPVerRequired = 14;
+minJMPVerRequired = 13;
 
 // CONSTANT
 strPART = "Part Number";
@@ -628,7 +631,8 @@ spcReport = Function( {listbox},
 				spcCapability( Here:dict[partnum], partnum, paramname, lsl, usl )
 			);
 			reportCapability = capability << Report << Minimize Window( 1 );
-			cpk = reportCapability[Outline Box( 6 )][Number Col Box( 1 )] << Get( 1 );
+			cpk = .;
+			Try( cpk = reportCapability[Outline Box( 6 )][Number Col Box( 1 )] << Get( 1 ) );
 			//Print( cpk );
 			cp = .;
 			Try( cp = reportCapability[Outline Box( 6 )][Number Col Box( 1 )] << Get( 4 ) );
@@ -642,7 +646,8 @@ spcReport = Function( {listbox},
 				spcCapabilityNonNormal( Here:dict[partnum], partnum, paramname, lsl, usl )
 			);
 			reportCapability = capability << Report << Minimize Window( 1 );
-			cpk = reportCapability[Outline Box( 9 )][Number Col Box( 1 )] << Get( 1 );
+			cpk = .;
+			Try( cpk = reportCapability[Outline Box( 9 )][Number Col Box( 1 )] << Get( 1 ) );
 			//Print( cpk );
 			cp = .;
 			Try( cp = reportCapability[Outline Box( 9 )][Number Col Box( 1 )] << Get( 4 ) );
