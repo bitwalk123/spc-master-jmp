@@ -33,12 +33,15 @@
 Names Default To Here( 1 );
 
 // Application Version
-app_ver = "0.5.1"; // from 07-Apr-2021
+app_ver = "0.5.2"; // from 21-Apr-2021
 // *** v0.5 milestone ***
 // add Cpk calculation for non-normal
 //
 // *** v0.5.1 ***
 // bug fix for Non-Normal Process Capability
+//
+// *** v0.5.2 ***
+// improve handling for empty cell in table
 
 // JMP version required to run this script
 minJMPVerRequired = 13;
@@ -189,9 +192,11 @@ loadPart = Function( {filename, partnum},
 			Column Separator String( "-" )
 		)
 	);
+	// delete row where 'Data Type' column is empty
+	deleteEmptyRow( dt, "Data Type" );
 	// delete row where 'Data Type' column is 'Hide'
-	dt = deleteHideRow( dt );
-	dt = setPointColor( dt );
+	deleteHideRow( dt );
+	setPointColor( dt );
 	Return( dt );
 );
 
@@ -240,7 +245,6 @@ deleteHideRow = Function( {dt},
 			dt << Delete Rows( r )
 		);
 	);
-	Return( dt );
 );
 
 /******************************************************************************
@@ -261,7 +265,6 @@ deleteHideRow = Function( {dt},
 setPointColor = Function( {dt},
 	dt << New Column( "Row State", Row State, Set Formula( If( :Data Type == "Historic", Color State( 82 ) ) ) );
 	Column( "Row State" ) << Copy To Row States();
-	Return( dt );
 );
 
 /******************************************************************************
