@@ -1,4 +1,5 @@
 id="com.asm.spc_master"
 name="SPC Master"
-minJMPVersion=14
+addinVersion=20210421
+minJMPVersion=13
 maxJMPVersion=15
