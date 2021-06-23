@@ -33,15 +33,18 @@
 Names Default To Here( 1 );
 
 // Application Version
-app_ver = "0.5.2"; // from 21-Apr-2021
+app_ver = "0.5.3"; // from 23-Jun-2021
 // *** v0.5 milestone ***
 // add Cpk calculation for non-normal
 //
-// *** v0.5.1 ***
+// *** v0.5.1 07-Apr-2021 ***
 // bug fix for Non-Normal Process Capability
 //
-// *** v0.5.2 ***
+// *** v0.5.2 21-Apr-2021 ***
 // improve handling for empty cell in table
+//
+// *** v0.5.3 23-Apr-2021 ***
+// apply jmp 16
 
 // JMP version required to run this script
 minJMPVerRequired = 13;
